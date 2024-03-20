@@ -1,0 +1,2108 @@
+00002000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/17/2023 6:37:30 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : Pong X68 EASY REmix
+00000000                             3  * Written by : Ben Cohen
+00000000                             4  * Date       : 10/4/2023
+00000000                             5  * Description: Do later
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  
+00000000                             9  ALL_REG                 REG             D0-D7/A0-A6
+00000000                            10  
+00000000  =00FFFFFF                 11  PLAYER_FILL_COLOR       EQU             $00FFFFFF
+00000000  =00A0607B                 12  ENEMY_FILL_COLOR        EQU             $00a0607b
+00000000  =00FFFFFF                 13  ENEMY_EDGE_COLOR        EQU             $00FFFFFF
+00000000  =00000000                 14  PADDLE_OUTLINE          EQU             $00000000
+00000000                            15  
+00000000  =00825363                 16  SCOREBOARD_FILL_COLOR   EQU             $00825363
+00000000  =00FFFFFF                 17  SCOREBOARD_EDGE_COLOR   EQU             $00FFFFFF
+00000000                            18  
+00000000  =00000077                 19  W_KEY                   EQU             $77
+00000000  =00000073                 20  S_KEY                   EQU             $73
+00000000                            21  
+00000000                            22  
+00000000  =00000014                 23  BALL_DIAMETER           EQU             20
+00000000                            24  
+00000000  =00000001                 25  DELAY_FRAME_VAL         EQU             1
+00000000                            26  
+00000000  =00FFFFFF                 27  COLOR_WHITE             EQU             $00FFFFFF
+00000000  =000000FF                 28  COLOR_RED               EQU             $000000FF
+00000000                            29  
+00000000  =00000005                 30  READ_CHAR               EQU             5
+00000000  =00000007                 31  CHECK_INPUT             EQU             7
+00000000  =0000000C                 32  KEYBOARD_ECHO           EQU             12
+00000000  =00000017                 33  DELAY_FRAME             EQU             23
+00000000  =00000049                 34  PLAY_SOUND              EQU             73
+00000000  =00000050                 35  SET_PEN_COLOR           EQU             80
+00000000  =00000051                 36  SET_FILL_COLOR          EQU             81
+00000000  =00000052                 37  DRAW_PIXEL              EQU             82
+00000000  =00000057                 38  DRAW_FRECT              EQU             87
+00000000  =00000058                 39  DRAW_FILLED_ELLIPSE     EQU             88
+00000000  =0000005C                 40  DOUBLE_BUFFER           EQU             92
+00000000  =0000005E                 41  BUFFER_PAINT            EQU             94
+00000000                            42  
+00000000  =00000280                 43  OUTPUT_MAX_WIDTH        EQU             640
+00000000  =000001E0                 44  OUTPUT_SCREEN_HEIGHT    EQU             480
+00000000  =000001A4                 45  OUTPUT_MAX_HEIGHT       EQU             420
+00000000                            46  
+00000000  =00010001                 47  BITMAP_BUFFER           EQU             $00010001
+00000000                            48  
+00000000  =0000000D                 49  POINTS_TO_WIN           EQU             13
+00000000                            50  
+00000000  =00000008                 51  TIME                    EQU             8
+00000000                            52  
+00000000                            53  ;store d2.l (X,Y) Hi and Low words
+00000000                            54  ;store d3.l timeSinceLastCall
+00000000                            55  
+00000010                            56      ORG    $10
+00000010                            57      
+00000010                            58   INCLUDE    ag_ScoreLED.x68   
+00000010                            59  
+00000010                            60  SCORE_REG               REG             D0-D2
+00000010                            61  
+00000010  =00F3C7DF                 62  SCORE_COLOR             EQU             $00f3c7df
+00000010  =00F3C7DF                 63  SCORE_EDGE_COLOR        EQU             $00f3c7df
+00000010  =00000004                 64  SCORE_POS_X             EQU             4
+00000010  =00000006                 65  SCORE_POS_Y             EQU             6
+00000010  =00000008                 66  SCORE_WIDTH             EQU             8
+00000010  =0000000A                 67  SCORE_HEIGHT            EQU             10
+00000010                            68  
+00000010  =00000005                 69  SCORE_THICKNESS         EQU             5
+00000010                            70  
+00000010                            71  
+00000010                            72  ag_DrawScoreLED
+00000010                            73  
+00000010                            74      ;d0 = score
+00000010                            75      ;d1 = x,y word/word position
+00000010                            76      ;d2 = width,height (word each)
+00000010                            77  
+00000010  48E7 E000                 78      movem.l SCORE_REG,-(sp)
+00000014                            79      
+00000014  4281                      80      clr.l   d1
+00000016  4282                      81      clr.l   d2
+00000018  4286                      82      clr.l   d6
+0000001A  41F9 00000158             83      lea     ScoreMask,a0
+00000020                            84      
+00000020                            85      ;---
+00000020                            86      ;Set pen colors
+00000020                            87      ;---
+00000020                            88      
+00000020  7050                      89      move.l  #SET_PEN_COLOR,d0
+00000022  223C 00F3C7DF             90      move.l  #SCORE_EDGE_COLOR,d1
+00000028  4E4F                      91      TRAP    #15
+0000002A                            92      
+0000002A  7051                      93      move.l  #SET_FILL_COLOR,d0
+0000002C  223C 00F3C7DF             94      move.l  #SCORE_COLOR,d1
+00000032  4E4F                      95      TRAP    #15
+00000034                            96      
+00000034                            97      
+00000034                            98      ;----
+00000034                            99      ;Get score and get the correct bitmask to show that score
+00000034                           100      ;----
+00000034                           101      
+00000034  2217                     102      move.l  (sp),d1        ;Move score to d1
+00000036  4841                     103      swap    d1
+00000038  323C 0000                104      move.w  #0,d1
+0000003C  4841                     105      swap    d1              ;Get rid of any remainders
+0000003E                           106      
+0000003E  1C30 1000                107      move.b  (a0,d1),d6      ;Move bitmask according to score to d6
+00000042                           108      
+00000042                           109      ;---
+00000042                           110      ;Using Bitmask, print the correct part to screen
+00000042                           111      ;---
+00000042                           112      ;BTST 6-0               ;Bit 7 is always 0    
+00000042  4281                     113      clr.l   d1
+00000044  4282                     114      clr.l   d2
+00000046  4283                     115      clr.l   d3
+00000048  4284                     116      clr.l   d4
+0000004A  7057                     117      move.l  #DRAW_FRECT,d0
+0000004C                           118      
+0000004C                           119      ;A
+0000004C                           120  .SegmentA
+0000004C  0806 0006                121      BTST    #$6,d6
+00000050  6700 0016                122      BEQ     .SegmentB
+00000054                           123      
+00000054                           124      ;Print A segment
+00000054  322F 0004                125      move.w  SCORE_POS_X(sp),d1
+00000058  342F 0006                126      move.w  SCORE_POS_Y(sp),d2
+0000005C                           127      
+0000005C  3601                     128      move.w  d1,d3
+0000005E  D66F 0008                129      add.w   SCORE_WIDTH(sp),d3
+00000062                           130      
+00000062  3802                     131      move.w  d2,d4
+00000064  5A44                     132      add.w   #SCORE_THICKNESS,d4
+00000066                           133      
+00000066  4E4F                     134      TRAP    #15
+00000068                           135      
+00000068                           136      ;B
+00000068                           137  .SegmentB
+00000068  0806 0005                138      BTST    #$5,d6
+0000006C  6700 001E                139      BEQ     .SegmentC
+00000070                           140      
+00000070                           141      ;Print B Segment
+00000070  362F 0004                142      move.w  SCORE_POS_X(sp),d3
+00000074  D66F 0008                143      add.w   SCORE_WIDTH(sp),d3
+00000078  3203                     144      move.w  d3,d1
+0000007A  5B41                     145      sub.w   #SCORE_THICKNESS,d1
+0000007C                           146      
+0000007C  342F 0006                147      move.w  SCORE_POS_Y(sp),d2
+00000080                           148      
+00000080  382F 000A                149      move.w  SCORE_HEIGHT(sp),d4
+00000084  88FC 0002                150      divu.w  #2,d4
+00000088  D842                     151      add.w   d2,d4
+0000008A                           152      
+0000008A  4E4F                     153      TRAP    #15
+0000008C                           154      
+0000008C                           155      
+0000008C                           156      ;C
+0000008C                           157  .SegmentC    
+0000008C  0806 0004                158      BTST    #$4,d6
+00000090  6700 0024                159      BEQ     .SegmentD
+00000094                           160      
+00000094                           161      ;Print C Segment
+00000094  362F 0004                162      move.w  SCORE_POS_X(sp),d3
+00000098  D66F 0008                163      add.w   SCORE_WIDTH(sp),d3
+0000009C  3203                     164      move.w  d3,d1
+0000009E  5B41                     165      sub.w   #SCORE_THICKNESS,d1
+000000A0                           166      
+000000A0  342F 000A                167      move.w  SCORE_HEIGHT(sp),d2
+000000A4  84FC 0002                168      divu.w  #2,d2
+000000A8  D46F 0006                169      add.w   SCORE_POS_Y(sp),d2
+000000AC                           170      
+000000AC                           171      
+000000AC  382F 000A                172      move.w  SCORE_HEIGHT(sp),d4
+000000B0  D86F 0006                173      add.w   SCORE_POS_Y(sp),d4
+000000B4                           174      
+000000B4  4E4F                     175      TRAP    #15
+000000B6                           176  
+000000B6                           177      ;D
+000000B6                           178  .SegmentD
+000000B6  0806 0003                179      BTST    #$3,d6
+000000BA  6700 0020                180      BEQ     .SegmentE
+000000BE                           181      
+000000BE                           182      ;Print D segment
+000000BE  322F 0004                183      move.w  SCORE_POS_X(sp),d1
+000000C2                           184      
+000000C2  342F 000A                185      move.w  SCORE_HEIGHT(sp),d2
+000000C6  5B42                     186      sub.w   #SCORE_THICKNESS,d2
+000000C8  D46F 0006                187      add.w  SCORE_POS_Y(sp),d2
+000000CC                           188      
+000000CC  3601                     189      move.w  d1,d3
+000000CE  D66F 0008                190      add.w   SCORE_WIDTH(sp),d3
+000000D2                           191      
+000000D2  382F 000A                192      move.w   SCORE_HEIGHT(sp),d4
+000000D6  D86F 0006                193      add.w    SCORE_POS_Y(sp),d4
+000000DA                           194      
+000000DA  4E4F                     195      TRAP    #15
+000000DC                           196      
+000000DC                           197      
+000000DC                           198      ;E
+000000DC                           199  .SegmentE
+000000DC  0806 0002                200      BTST    #$2,d6
+000000E0  6700 0020                201      BEQ     .SegmentF
+000000E4                           202      
+000000E4  322F 0004                203      move.w  SCORE_POS_X(sp),d1
+000000E8  3601                     204      move.w  d1,d3
+000000EA  5A43                     205      add.w   #SCORE_THICKNESS,d3
+000000EC                           206      
+000000EC  342F 000A                207      move.w  SCORE_HEIGHT(sp),d2
+000000F0  84FC 0002                208      divu.w  #2,d2
+000000F4  D46F 0006                209      add.w   SCORE_POS_Y(sp),d2
+000000F8                           210      
+000000F8                           211      
+000000F8  382F 000A                212      move.w  SCORE_HEIGHT(sp),d4
+000000FC  D86F 0006                213      add.w   SCORE_POS_Y(sp),d4
+00000100                           214      
+00000100  4E4F                     215      TRAP    #15
+00000102                           216      
+00000102                           217      ;F
+00000102                           218  .SegmentF
+00000102  0806 0001                219      BTST    #$1,d6
+00000106  6700 001A                220      BEQ     .SegmentG
+0000010A                           221      
+0000010A  322F 0004                222      move.w  SCORE_POS_X(sp),d1
+0000010E  3601                     223      move.w  d1,d3
+00000110  5A43                     224      add.w   #SCORE_THICKNESS,d3
+00000112                           225      
+00000112  342F 0006                226      move.w  SCORE_POS_Y(sp),d2
+00000116                           227      
+00000116  382F 000A                228      move.w  SCORE_HEIGHT(sp),d4
+0000011A  88FC 0002                229      divu.w  #2,d4
+0000011E  D842                     230      add.w   d2,d4
+00000120                           231      
+00000120  4E4F                     232      TRAP    #15
+00000122                           233      
+00000122                           234      ;G
+00000122                           235  .SegmentG
+00000122  0806 0000                236      BTST    #$0,d6
+00000126  6700 002A                237      BEQ     .End
+0000012A                           238      
+0000012A  322F 0004                239      move.w  SCORE_POS_X(sp),d1
+0000012E  3601                     240      move.w  d1,d3
+00000130  D66F 0008                241      add.w   SCORE_WIDTH(sp),d3
+00000134                           242      
+00000134                           243      
+00000134  342F 000A                244      move.w  SCORE_HEIGHT(sp),d2
+00000138  84FC 0002                245      divu.w  #2,d2
+0000013C  D46F 0006                246      add.w   SCORE_POS_Y(sp),d2
+00000140  3802                     247      move.w  d2,d4
+00000142                           248      
+00000142  4285                     249      clr.l   d5
+00000144  3A3C 0005                250      move.w  #SCORE_THICKNESS,d5
+00000148  8AFC 0002                251      divu.w  #2,d5
+0000014C                           252      
+0000014C                           253      
+0000014C  9445                     254      sub.w   d5,d2
+0000014E  D845                     255      add.w   d5,d4
+00000150                           256      
+00000150  4E4F                     257      TRAP    #15
+00000152                           258      
+00000152                           259      
+00000152                           260  .End
+00000152                           261      
+00000152                           262      
+00000152  4CDF 0007                263      movem.l (sp)+,SCORE_REG
+00000156  4E75                     264      rts
+00000158                           265      
+00000158                           266  
+00000158                           267  ;xXABCDEFG               0   1   2   3   4   5  6    7   8   9
+00000158= 7E 30 6D 79 33 5B ...    268  ScoreMask      dc.b     $7E,$30,$6D,$79,$33,$5B,$5F,$70,$7F,$7B
+00000162                           269  
+00000162                           270  
+00000162                           271  
+00000162                           272  
+00000162                           273  -------------------- end include --------------------
+00000162                           274   INCLUDE    ag_DrawBall.x68
+00000162                           275  
+00000162                           276  
+00000162  =00FFFFFF                277  COLOR_WHITE             EQU             $00FFFFFF
+00000162  =000000FF                278  COLOR_RED               EQU             $000000FF
+00000162                           279  
+00000162  =00F3C7DF                280  BALL_FILL_COLOR         EQU             $00f3c7df
+00000162  =00FFFFFF                281  BALL_EDGE_COLOR         EQU             $00FFFFFF
+00000162                           282  
+00000162                           283  ;BALL_STACK_SIZE         EQU             8   ;in bytes
+00000162                           284  
+00000162  =00000000                285  BALL_POSITION_X         EQU             0
+00000162  =00000004                286  BALL_POSITION_Y         EQU             4
+00000162  =00000008                287  BALL_VELOCITY_X         EQU             8
+00000162  =0000000A                288  BALL_VELOCITY_Y         EQU             10
+00000162  =0000000C                289  PLAYER_POS_X            EQU             12
+00000162  =00000010                290  PLAYER_POS_Y            EQU             16
+00000162  =00000014                291  ENEMY_POS_X             EQU             20
+00000162  =00000018                292  ENEMY_POS_Y             EQU             24
+00000162  =0000001C                293  PADDLE_SIZE_X           EQU             28
+00000162  =0000001E                294  PADDLE_SIZE_Y           EQU             30
+00000162  =00000020                295  PLAYER_SCORE            EQU             32
+00000162  =00000024                296  ENEMY_SCORE             EQU             36
+00000162                           297  
+00000162  =00000050                298  SET_PEN_COLOR           EQU             80
+00000162  =00000051                299  SET_FILL_COLOR          EQU             81
+00000162  =00000052                300  DRAW_PIXEL              EQU             82
+00000162  =00000058                301  DRAW_FILLED_ELLIPSE     EQU             88
+00000162                           302  
+00000162                           303  BALL_REG                REG             D0-D7/A0-A1
+00000162                           304  DRAW_BALL_REG           REG             D0-D1
+00000162                           305  
+00000162                           306  
+00000162                           307  ag_UpdateBall
+00000162                           308      
+00000162  48E7 FFC0                309      movem.l BALL_REG,-(sp)   
+00000166                           310      
+00000166  4280                     311      clr.l   d0
+00000168  4281                     312      clr.l   d1
+0000016A  4282                     313      clr.l   d2
+0000016C  4283                     314      clr.l   d3
+0000016E  4284                     315      clr.l   d4
+00000170  4285                     316      clr.l   d5
+00000172                           317  
+00000172                           318      
+00000172  2C2F 0000                319      move.l  BALL_POSITION_X(sp),d6           ;x Pos val
+00000176  2E2F 0004                320      move.l  BALL_POSITION_Y(sp),d7           ;y Pos val
+0000017A                           321      
+0000017A                           322      ;ADDING BALL VELOCITY
+0000017A  322F 0008                323      move.w  BALL_VELOCITY_X(sp),d1
+0000017E  342F 000A                324      move.w  BALL_VELOCITY_Y(sp),d2
+00000182                           325      
+00000182                           326      ;Extend the sign to a long
+00000182  48C1                     327      ext.l   d1
+00000184  48C2                     328      ext.l   d2
+00000186                           329      
+00000186  DC81                     330      add.l   d1,d6       ;add x velocity
+00000188  DE82                     331      add.l   d2,d7       ;add y velocity
+0000018A                           332    
+0000018A                           333  
+0000018A                           334  .ag_Check_Player
+0000018A                           335      
+0000018A  0C39 0000 0000037C       336      cmp.b   #0,(IgnorePaddle)
+00000192  6600 0132                337      BNE     .ag_PaddleMiss
+00000196                           338      
+00000196                           339      ;Check if greater than right x of paddle
+00000196  4285                     340      clr.l   d5
+00000198  0685 00001400            341      addi.l  #(BALL_DIAMETER)<<8,d5
+0000019E  DA86                     342      add.l   d6,d5
+000001A0                           343      
+000001A0  202F 000C                344      move.l  PLAYER_POS_X(sp),d0
+000001A4                           345  
+000001A4  BA80                     346      cmp.l   d0,d5
+000001A6  6D00 004A                347      BLT     .ag_Check_Enemy
+000001AA                           348      
+000001AA                           349      ;Check if less than Upper Y
+000001AA  202F 0010                350      move.l  PLAYER_POS_Y(sp),d0
+000001AE  2A3C 00001400            351      move.l  #(BALL_DIAMETER)<<8,d5      ;Get the lower y val of ball
+000001B4  DA87                     352      add.l   d7,d5                       ;Add player Y pos
+000001B6                           353      
+000001B6  BA80                     354      cmp.l   d0,d5
+000001B8  6D00 010C                355      BLT     .ag_PaddleMiss
+000001BC                           356      
+000001BC                           357      ;Check if Greater than lower Y
+000001BC  4281                     358      clr.l   d1 
+000001BE  322F 001E                359      move.w  PADDLE_SIZE_Y(sp),d1    ;Get paddle size
+000001C2  E181                     360      asl.l   #8,d1                   ;Shift 8 to left for fixed point
+000001C4  D081                     361      add.l   d1,d0                   ;add value to d0, player pos y
+000001C6  BE80                     362      cmp.l   d0,d7                   ;compare y
+000001C8  6E00 00FC                363      BGT     .ag_PaddleMiss
+000001CC                           364      
+000001CC                           365      ;If pass all, we are inside the player, change velocity!  
+000001CC  4280                     366      clr.l   d0
+000001CE  906F 0008                367      sub.w   BALL_VELOCITY_X(sp),d0
+000001D2  3F40 0008                368      move.w  d0,BALL_VELOCITY_X(sp)
+000001D6                           369      
+000001D6  202F 000C                370      move.l  PLAYER_POS_X(sp),d0
+000001DA  0440 1400                371      sub.w   #(BALL_DIAMETER)<<8,d0
+000001DE  2C00                     372      move.l  d0,d6                       ;Set x pos to leftmost
+000001E0                           373      
+000001E0  43F9 00386717            374      lea     HIT_SOUND,a1
+000001E6  7200                     375      move.l  #0,d1
+000001E8  7400                     376      move.l  #0,d2
+000001EA  7049                     377      move.l  #PLAY_SOUND,d0
+000001EC  4E4F                     378      TRAP    #15 
+000001EE                           379      
+000001EE  6000 00C8                380      BRA     .ag_SavePos
+000001F2                           381      
+000001F2                           382  .ag_Check_Enemy  
+000001F2                           383      
+000001F2  0C39 0000 0000037C       384      cmp.b   #0,(IgnorePaddle)           ;Check if paddles are to be ignored (0 = false, else = true)
+000001FA  6600 00CA                385      BNE     .ag_PaddleMiss
+000001FE                           386      
+000001FE                           387      ;Check if less than right x of paddle
+000001FE  4281                     388      clr.l   d1
+00000200  202F 0014                389      move.l  ENEMY_POS_X(sp),d0
+00000204  322F 001C                390      move.w  PADDLE_SIZE_X(sp),d1
+00000208  E181                     391      asl.l   #8,d1
+0000020A  D081                     392      add.l   d1,d0
+0000020C  BC80                     393      cmp.l   d0,d6
+0000020E  6E00 0074                394      BGT     .ag_EdgeCheck 
+00000212                           395  
+00000212                           396      ;Check if lower than Upper Y
+00000212  202F 0018                397      move.l  ENEMY_POS_Y(sp),d0
+00000216  2A3C 00001400            398      move.l  #(BALL_DIAMETER)<<8,d5      ;Get the lower y val of ball
+0000021C  DA87                     399      add.l   d7,d5                       ;Add Enemy Y pos
+0000021E                           400  
+0000021E  BA80                     401      cmp.l   d0,d5
+00000220  6D00 00A4                402      BLT     .ag_PaddleMiss 
+00000224                           403     
+00000224                           404      ;Check if Greater than lower Y
+00000224  4281                     405      clr.l   d1 
+00000226  322F 001E                406      move.w  PADDLE_SIZE_Y(sp),d1        ;Get paddle size
+0000022A  E181                     407      asl.l   #8,d1                       ;Shift 8 to left for fixed point
+0000022C  D081                     408      add.l   d1,d0                       ;add value to d0, enemy pos y
+0000022E  BE80                     409      cmp.l   d0,d7                       ;compare y
+00000230  6E00 0094                410      BGT     .ag_PaddleMiss
+00000234                           411     
+00000234                           412      ;If pass all, inverse velocity!        
+00000234  4280                     413      clr.l   d0
+00000236  906F 0008                414      sub.w   BALL_VELOCITY_X(sp),d0
+0000023A  3F40 0008                415      move.w  d0,BALL_VELOCITY_X(sp)
+0000023E                           416      
+0000023E  202F 0014                417      move.l  ENEMY_POS_X(sp),d0
+00000242  4281                     418      clr.l   d1
+00000244  322F 001C                419      move.w  PADDLE_SIZE_X(sp),d1
+00000248  E181                     420      asl.l   #8,d1
+0000024A  D081                     421      add.l   d1,d0 
+0000024C  2C00                     422      move.l  d0,d6
+0000024E                           423      
+0000024E  43F9 00386717            424      lea     HIT_SOUND,a1
+00000254  7200                     425      move.l  #0,d1
+00000256  7400                     426      move.l  #0,d2
+00000258  7049                     427      move.l  #PLAY_SOUND,d0
+0000025A  4E4F                     428      TRAP    #15 
+0000025C                           429      
+0000025C  6000 005A                430      BRA     .ag_SavePos
+00000260                           431      
+00000260                           432      
+00000260                           433  .ag_PlayerScored
+00000260  13FC 0000 0000037C       434      move.b  #0,(IgnorePaddle)
+00000268  206F 0020                435      move.l  PLAYER_SCORE(sp),a0
+0000026C  5290                     436      addi.l  #1,(a0)
+0000026E                           437  
+0000026E                           438      ;---
+0000026E                           439      ;Random Constrained reset
+0000026E                           440      ;---
+0000026E  6000 0092                441      BRA     .ag_RandomSpawn
+00000272                           442      
+00000272                           443  .ag_EnemyScored
+00000272  13FC 0000 0000037C       444      move.b  #0,(IgnorePaddle)
+0000027A  206F 0024                445      move.l  ENEMY_SCORE(sp),a0
+0000027E  5290                     446      addi.l  #1,(a0)
+00000280                           447  
+00000280                           448      ;--
+00000280                           449      ;Reset ball
+00000280                           450      ;--
+00000280                           451      ;---
+00000280                           452      ;Random Constrained reset
+00000280                           453      ;---
+00000280  6000 0080                454      BRA     .ag_RandomSpawn
+00000284                           455  
+00000284                           456  .ag_EdgeCheck      
+00000284                           457  .ag_Y_MAX
+00000284  0C87 00019000            458      cmpi.l   #(OUTPUT_MAX_HEIGHT-BALL_DIAMETER)<<8,d7
+0000028A  6D00 0016                459      BLT     .ag_Y_MIN
+0000028E  4280                     460      clr.l   d0
+00000290  906F 000A                461      sub.w   BALL_VELOCITY_Y(sp),d0
+00000294  3F40 000A                462      move.w  d0,BALL_VELOCITY_Y(sp)
+00000298  2E3C 00019000            463      move.l  #(OUTPUT_MAX_HEIGHT-BALL_DIAMETER)<<8,d7
+0000029E  6000 0018                464      BRA     .ag_SavePos
+000002A2                           465      
+000002A2                           466  .ag_Y_MIN
+000002A2  BEBC 00000000            467      cmp.l   #0,d7
+000002A8  6E00 000E                468      BGT     .ag_SavePos
+000002AC  4280                     469      clr.l   d0
+000002AE  906F 000A                470      sub.w   BALL_VELOCITY_Y(sp),d0
+000002B2  3F40 000A                471      move.w  d0,BALL_VELOCITY_Y(sp)
+000002B6  7E00                     472      move.l  #0,d7
+000002B8                           473      
+000002B8                           474  .ag_SavePos
+000002B8                           475      ;Save Position
+000002B8  2F46 0000                476      move.l  d6,BALL_POSITION_X(sp)
+000002BC  2F47 0004                477      move.l  d7,BALL_POSITION_Y(sp)
+000002C0  4CDF 03FF                478      movem.l (sp)+,BALL_REG
+000002C4  4E75                     479      rts
+000002C6                           480      
+000002C6                           481  .ag_PaddleMiss 
+000002C6  13FC 0001 0000037C       482      move.b  #1,(IgnorePaddle)
+000002CE                           483     
+000002CE                           484  .ag_X_MAX
+000002CE  0C86 00026C00            485      cmpi.l   #(OUTPUT_MAX_WIDTH-BALL_DIAMETER)<<8,d6            ;right X minus max right
+000002D4  6D00 0014                486      BLT     .ag_X_MIN
+000002D8                           487      ;if greater than equal
+000002D8  4280                     488      clr.l   d0
+000002DA  906F 0008                489      sub.w   BALL_VELOCITY_X(sp),d0
+000002DE  3F40 0008                490      move.w  d0,BALL_VELOCITY_X(sp)
+000002E2  2C3C 00026C00            491      move.l  #(OUTPUT_MAX_WIDTH-BALL_DIAMETER)<<8,d6
+000002E8  6088                     492      BRA     .ag_EnemyScored
+000002EA                           493      
+000002EA                           494  .ag_X_MIN
+000002EA  BCBC 00000000            495      cmp.l   #0,d6            ;left X minus comp 0    
+000002F0  6E92                     496      BGT     .ag_Y_MAX
+000002F2  4280                     497      clr.l   d0
+000002F4  906F 0008                498      sub.w   BALL_VELOCITY_X(sp),d0
+000002F8  3F40 0008                499      move.w  d0,BALL_VELOCITY_X(sp)
+000002FC  7C00                     500      move.l  #0,d6
+000002FE  6000 FF60                501      BRA     .ag_PlayerScored
+00000302                           502  
+00000302                           503  .ag_RandomSpawn
+00000302  7008                     504      move.l  #TIME,d0            ;d1 holds time
+00000304  4E4F                     505      TRAP    #15
+00000306                           506      
+00000306                           507      ;X
+00000306  2001                     508      move.l  d1,d0
+00000308                           509      
+00000308  223C 000000A0            510      move.l  #(OUTPUT_MAX_WIDTH/4),d1                ;Save portion of width
+0000030E                           511      
+0000030E  80C1                     512      divu.w  d1,d0                                   ;Divide time by width portion
+00000310  303C 0000                513      move.w  #0,d0                                   ;Set quotient to 0
+00000314  4840                     514      swap    d0                                      ;Get remainder
+00000316  0640 00F0                515      add.w   #(3*OUTPUT_MAX_WIDTH/8),d0              ;Add width portion as offset
+0000031A  E180                     516      asl.l   #8,d0                                   ;Convert to fixed point
+0000031C  2C00                     517      move.l  d0,d6                                   ;Move to x value
+0000031E                           518      
+0000031E                           519      ;Y
+0000031E  7008                     520      move.l  #TIME,d0            ;d1 holds time
+00000320  4E4F                     521      TRAP    #15
+00000322                           522      
+00000322  2001                     523      move.l  d1,d0
+00000324                           524     
+00000324  223C 000000D2            525      move.l  #(OUTPUT_MAX_HEIGHT/2),d1               ;Save portion of height
+0000032A                           526      
+0000032A  80C1                     527      divu.w  d1,d0                                   ;Divide time by height portion
+0000032C  303C 0000                528      move.w  #0,d0                                   ;set quotient to 0
+00000330  4840                     529      swap    d0                                      ;Get remainder to lower word
+00000332  0640 0069                530      add.w   #(OUTPUT_MAX_HEIGHT/4),d0               ;Add portion of height as offset
+00000336  E180                     531      asl.l   #8,d0                                   ;Convert to fixed point
+00000338  2E00                     532      move.l  d0,d7                                   ;move to y value
+0000033A                           533      
+0000033A  6000 FF7C                534      BRA     .ag_SavePos
+0000033E                           535      
+0000033E                           536      
+0000033E                           537      
+0000033E                           538  ;d0 = Ball Position X
+0000033E                           539  ;d1 = Ball Position Y    
+0000033E                           540  ag_DrawBall:      
+0000033E                           541  
+0000033E  48E7 C000                542      movem.l DRAW_BALL_REG,-(sp)
+00000342                           543      
+00000342  7050                     544      move.l  #SET_PEN_COLOR,d0
+00000344  223C 00FFFFFF            545      move.l  #BALL_EDGE_COLOR,d1
+0000034A  4E4F                     546      TRAP #15
+0000034C                           547      
+0000034C  7051                     548      move.l  #SET_FILL_COLOR,d0
+0000034E  223C 00F3C7DF            549      move.l  #BALL_FILL_COLOR,d1
+00000354  4E4F                     550      TRAP #15
+00000356                           551      
+00000356  222F 0000                552      move.l  0(sp),d1
+0000035A  E081                     553      asr.l   #8,d1
+0000035C                           554      
+0000035C  282F 0004                555      move.l  4(sp),d4
+00000360  E084                     556      asr.l   #8,d4
+00000362                           557  
+00000362  2601                     558      move.l  d1,d3                       ;Move Left X to Right X
+00000364  0683 00000014            559      add.l   #BALL_DIAMETER,d3           ;Add diameter to Right X
+0000036A                           560      
+0000036A  2404                     561      move.l  d4,d2                       ;Move Lower Y to Upper Y       
+0000036C  0682 00000014            562      add.l   #BALL_DIAMETER,d2           ;Add diameter to Upper Y
+00000372                           563      
+00000372  7058                     564      move.l  #DRAW_FILLED_ELLIPSE,d0
+00000374  4E4F                     565      TRAP #15
+00000376                           566         
+00000376  4CDF 0003                567      movem.l (sp)+,DRAW_BALL_REG
+0000037A  4E75                     568      rts
+0000037C                           569  
+0000037C= 00                       570  IgnorePaddle    dc.b    $00
+0000037D= 03                       571  PadBytes        dc.b    3
+0000037E                           572  
+0000037E                           573  
+0000037E                           574  
+0000037E                           575  
+0000037E                           576  
+0000037E                           577  
+0000037E                           578  
+0000037E                           579  
+0000037E                           580  
+0000037E                           581  
+0000037E                           582  
+0000037E                           583  
+0000037E                           584  
+0000037E                           585  
+0000037E                           586  
+0000037E                           587  -------------------- end include --------------------
+0000037E                           588   INCLUDE    ag_bitmap_draw.x68
+0000037E                           589  
+0000037E                           590  
+0000037E                           591      
+0000037E                           592     
+0000037E                           593      ;NOTE: If chunk offset is at a width/height that exceeds the BMP, offset will be set to 0, respectively
+0000037E                           594      ;NOTE: If Chunk Size is larger in width and/or height, chunk size will be set to the respective max value of the BMP minus the chunk offset
+0000037E                           595      ;NOTE: Having all inputs be 0, in accordance, will result in printing the entire BMP
+0000037E                           596      
+0000037E                           597      
+0000037E  =00000000                598  Full_Image_Width    EQU     0
+0000037E  =00000002                599  Full_Image_Height   EQU     2
+0000037E  =00000004                600  Chunk_X_Offset      EQU     4
+0000037E  =00000006                601  Chunk_Y_Offset      EQU     6
+0000037E  =00000008                602  Chunk_Width         EQU     8
+0000037E  =0000000A                603  Chunk_Height        EQU     10
+0000037E  =0000000C                604  Output_X_Pos        EQU     12
+0000037E  =0000000E                605  Output_Y_Pos        EQU     14
+0000037E                           606  
+0000037E  =0000000A                607  BITMAP_IMAGE_DATA_OFFSET    EQU     10
+0000037E  =00000012                608  BITMAP_WIDTH_OFFSET         EQU     18
+0000037E  =00000016                609  BITMAP_HEIGHT_OFFSET        EQU     22
+0000037E  =0000001C                610  BITMAP_BPP_OFFSET           EQU     28
+0000037E                           611  
+0000037E                           612  
+0000037E                           613  DrawBMP:
+0000037E                           614  
+0000037E  2448                     615      move.l  a0,a2                      ;For getting width and height
+00000380  2004                     616      move.l  d4,d0                       ;Save user input here for now
+00000382                           617      
+00000382  0C50 424D                618      cmp.w   #$424D,(a0)                   ;Check to see if file is BMP
+00000386  6600 0150                619      BNE     EndNotBMP
+0000038A                           620      
+0000038A  0C28 0020 001C           621      cmp.b   #32,BITMAP_BPP_OFFSET(a0)     ;Check to see if BMP is 32-bit
+00000390  6600 0152                622      BNE     EndNot32Bit
+00000394                           623      
+00000394  2828 0012                624      move.l  BITMAP_WIDTH_OFFSET(a0),d4                  ;width   
+00000398  4EB9 00000510            625      jsr     ConvertToBigEndian
+0000039E  2C04                     626      move.l  d4,d6
+000003A0  BCBC 00000000            627      cmp.l   #0,d6
+000003A6  6700 012A                628      BEQ     End                         ;MAke sure image width isnt zero
+000003AA                           629      
+000003AA  2828 0016                630      move.l  BITMAP_HEIGHT_OFFSET(a0),d4                   ;Height
+000003AE  4EB9 00000510            631      jsr     ConvertToBigEndian
+000003B4  2E04                     632      move.l  d4,d7  
+000003B6  BEBC 00000000            633      cmp.l   #0,d7
+000003BC  6700 0114                634      BEQ     End                         ;Make sure image height isnt zero
+000003C0                           635      
+000003C0  2800                     636      move.l  d0,d4                       ;Move user input back into d4 UNCOMMENT IF NEEDED
+000003C2                           637      
+000003C2                           638      
+000003C2                           639      ;Get d1 to store max image size
+000003C2  4281                     640      clr.l   d1
+000003C4  3206                     641      move.w  d6,d1
+000003C6  4841                     642      swap    d1
+000003C8  3207                     643      move.w  d7,d1
+000003CA                           644      
+000003CA  48E7 7800                645      movem.l D1-D4,-(sp)                 ;Move vals to stack then 
+000003CE                           646      
+000003CE                           647      ;Check that offset does not extend past max image size (does it? Set to 0)
+000003CE  4281                     648      clr.l   d1
+000003D0  4284                     649      clr.l   d4
+000003D2                           650  
+000003D2                           651  CheckForZeroChunkX:
+000003D2                           652  
+000003D2  0C6F 0000 0008           653      cmp.w   #0,Chunk_Width(sp)
+000003D8  6600 0008                654      BNE     CheckForZeroChunkY
+000003DC  3F6F 0000 0008           655      move.w  Full_Image_Width(sp),Chunk_Width(sp)
+000003E2                           656      
+000003E2                           657  CheckForZeroChunkY:
+000003E2  0C6F 0000 000A           658      cmp.w   #0,Chunk_Height(sp)
+000003E8  6600 0008                659      BNE     CheckChunkXOffset
+000003EC  3F6F 0002 000A           660      move.w  Full_Image_Height(sp),Chunk_Height(sp)
+000003F2                           661  
+000003F2                           662  
+000003F2                           663  CheckChunkXOffset:
+000003F2                           664      
+000003F2  322F 0000                665      move.w  Full_Image_Width(sp),d1
+000003F6  382F 0004                666      move.w  Chunk_X_Offset(sp),d4
+000003FA  B284                     667      cmp.l   d4,d1
+000003FC  6E00 0008                668      BGT     CheckChunkYOffset
+00000400                           669  
+00000400  3F7C 0000 0004           670      move.w  #0,Chunk_X_Offset(sp)
+00000406                           671  
+00000406                           672  CheckChunkYOffset:
+00000406                           673  
+00000406  322F 0002                674      move.w  Full_Image_Height(sp),d1
+0000040A  382F 0006                675      move.w  Chunk_Y_Offset(sp),d4
+0000040E  B284                     676      cmp.l   d4,d1
+00000410  6E00 0008                677      BGT     CheckWidth
+00000414                           678  
+00000414  3F7C 0000 0006           679      move.w  #0,Chunk_Y_Offset(sp)
+0000041A                           680      
+0000041A                           681  CheckWidth:    
+0000041A                           682      ;Check that chunk size is not larger than picture    
+0000041A  322F 0000                683      move.w  Full_Image_Width(sp),d1
+0000041E  926F 0004                684      sub.w   Chunk_X_Offset(sp),d1    
+00000422  382F 0008                685      move.w  Chunk_Width(sp),d4
+00000426  B284                     686      cmp.l   d4,d1
+00000428                           687      
+00000428  6C00 0006                688      BGE     CheckHeight
+0000042C                           689      
+0000042C  3F41 0008                690      move.w  d1,Chunk_Width(sp)  ;Set max size minus offset as chunk size
+00000430                           691          
+00000430                           692  CheckHeight:
+00000430                           693  
+00000430  322F 0002                694      move.w  Full_Image_Height(sp),d1
+00000434  926F 0006                695      sub.w   Chunk_Y_Offset(sp),d1
+00000438  382F 000A                696      move.w  Chunk_Height(sp),d4
+0000043C  B284                     697      cmp.l   d4,d1
+0000043E  6C00 0006                698      BGE     SetOutputScreen
+00000442                           699      
+00000442  3F41 000A                700      move.w  d1,Chunk_Height(sp)  ;Set max size minus offset as chunk size
+00000446                           701  
+00000446                           702  
+00000446                           703  SetOutputScreen:
+00000446                           704      
+00000446                           705      ;SETTING OUTPUT SCREEN SIZE TO DISPLAY JUST ENOUGH   
+00000446  4281                     706      clr.l   d1
+00000448  322F 000C                707      move.w  Output_X_Pos(sp),d1
+0000044C  D26F 0008                708      add.w   Chunk_Width(sp),d1
+00000450  4841                     709      swap    d1
+00000452  322F 000E                710      move.w  Output_Y_Pos(sp),d1
+00000456  D26F 000A                711      add.w   Chunk_Height(sp),d1
+0000045A                           712      
+0000045A  7021                     713      move.l  #33,d0
+0000045C                           714      ;TRAP    #15
+0000045C                           715      
+0000045C                           716     
+0000045C                           717      
+0000045C                           718  
+0000045C  2248                     719      move.l  a0,a1
+0000045E  1028 000A                720      move.b  BITMAP_IMAGE_DATA_OFFSET(a0),d0
+00000462  D3C0                     721      add.l   d0,a1                               ;Move image data start to a1 address
+00000464                           722      
+00000464                           723      
+00000464                           724      ;clear iterator registers
+00000464  4286                     725      clr.l   d6
+00000466  4287                     726      clr.l   d7
+00000468                           727      
+00000468  3E2F 000A                728      move.w  Chunk_Height(sp),d7         ;Set max height of chunk
+0000046C                           729      
+0000046C                           730      
+0000046C                           731      ;d0 store x and d1 store y of chunk start
+0000046C  4280                     732      clr.l   d0
+0000046E  4281                     733      clr.l   d1
+00000470  4283                     734      clr.l   d3
+00000472                           735      
+00000472                           736      ;To Find the actual height for d7
+00000472                           737      
+00000472  322F 0002                738      move.w  Full_Image_Height(sp),d1    ;Move max image height to d1
+00000476  926F 0006                739      sub.w   Chunk_Y_Offset(sp),d1       ;remove chunk offset from d1
+0000047A  926F 000A                740      sub.w   Chunk_Height(sp),d1         ;remove chunk height size from d1
+0000047E                           741  
+0000047E                           742      
+0000047E  C2EF 0000                743      mulu.w  Full_Image_Width(sp),d1     ;multiply max width by true height and assign to d1
+00000482  E589                     744      lsl.l   #02,d1                      ;Multiple by 4 to get from long to bytes (shift left 2 bits is the same)   
+00000484  D3C1                     745      add.l   d1,a1                       ;add height(y) offset to a1
+00000486  2649                     746      move.l  a1,a3                       ;store start of data to a3 and a3 will increment by width + offset when called
+00000488                           747      
+00000488  4281                     748      clr.l   d1
+0000048A  322F 0004                749      move.w  Chunk_X_Offset(sp),d1       ;get x offset
+0000048E  C2FC 0004                750      mulu.w  #04,d1                      ;get x offset bytes
+00000492  D3C1                     751      add.l   d1,a1                       ;added the offset to a1
+00000494  244F                     752      move.l  sp,a2                       ;save current stack pointer to a2
+00000496                           753      
+00000496                           754  
+00000496                           755  BasicDraw:
+00000496                           756      
+00000496                           757      
+00000496  2819                     758      move.l  (a1)+,d4                    ;Get pixel data at a1 then increment
+00000498                           759      
+00000498  4EB9 00000518            760      jsr     ConvertToBGR
+0000049E                           761    
+0000049E  2204                     762      move.l  d4,d1                       ;Set Pen Color
+000004A0  7050                     763      move.l  #80,d0
+000004A2  4E4F                     764      TRAP #15
+000004A4                           765      
+000004A4                           766      ;color pixel (requires output coordinate mapping)
+000004A4  2206                     767      move.l  d6,d1                       ;move current x val to output x
+000004A6  D26F 000C                768      add.w   Output_X_Pos(sp),d1             ;add in the user define output offset for X
+000004AA  2407                     769      move.l  d7,d2                       ;move current y val to output y
+000004AC  D46F 000E                770      add.w   Output_Y_Pos(sp),d2             ;add the user defined output offset for Y
+000004B0  5342                     771      sub.w   #01,d2                      ;Minus 1 to output to account for max size
+000004B2  7052                     772      move.l  #82,d0
+000004B4  4E4F                     773      TRAP #15
+000004B6                           774      
+000004B6                           775      ;increment width iterator value
+000004B6  5286                     776      add.l   #01,d6
+000004B8                           777      
+000004B8  4281                     778      clr.l   d1
+000004BA  322F 0008                779      move.w  Chunk_Width(sp),d1      ;Move chunk width to d1
+000004BE  BC81                     780      cmp.l   d1,d6                   ;We at width of chunk?
+000004C0  66D4                     781      BNE     BasicDraw
+000004C2                           782      
+000004C2                           783      
+000004C2                           784  CheckIfEnd:
+000004C2  4281                     785      clr.l   d1
+000004C4  BE81                     786      cmp.l   d1,d7       ;If the height = 0, we are done since current height = final height of chunk
+000004C6  6700 000A                787      BEQ     End
+000004CA  4EB9 000004F0            788      jsr     NextRow
+000004D0  66C4                     789      BNE     BasicDraw   ;Branch to draw again
+000004D2                           790      
+000004D2                           791  End:  
+000004D2  4CDF 001E                792      movem.l (sp)+,D1-D4
+000004D6  4E75                     793      rts
+000004D8                           794      
+000004D8                           795  EndNotBMP:
+000004D8                           796      ;Print not a bmp to screen
+000004D8  700D                     797      move.l  #13,d0
+000004DA  43F9 0000051C            798      lea     NotBMP,a1
+000004E0  4E4F                     799      TRAP #15
+000004E2  4E75                     800      rts
+000004E4                           801      
+000004E4                           802  EndNot32Bit:
+000004E4                           803      ;Print not 32 bit to screen
+000004E4  700D                     804      move.l  #13,d0
+000004E6  43F9 0000052E            805      lea     Not32Bit,a1
+000004EC  4E4F                     806      TRAP #15
+000004EE  4E75                     807      rts
+000004F0                           808  
+000004F0                           809  
+000004F0                           810  NextRow:
+000004F0  4286                     811      clr.l   d6
+000004F2  4281                     812      clr.l   d1
+000004F4  4282                     813      clr.l   d2
+000004F6                           814      
+000004F6  5283                     815      add.l   #01,d3                      ;REMOVE LATER IF NOT USED
+000004F8                           816      
+000004F8                           817      ;go to next row offset
+000004F8  322A 0000                818      move.w  Full_Image_Width(a2),d1     ;Move full image width to d1
+000004FC  E589                     819      lsl.l   #02,d1                      ;Multiple by 4 to get from long to bytes  
+000004FE  D7C1                     820      add.l   d1,a3                       ;add this increment to a3 (the row holder)   
+00000500  224B                     821      move.l  a3,a1                       ;give increment to a1
+00000502                           822      
+00000502  342A 0004                823      move.w  Chunk_X_Offset(a2),d2       ;add width offset (long) to d2
+00000506  C4FC 0004                824      mulu.w   #04,d2                     ;get width offset in bytes
+0000050A  D3C2                     825      add.l   d2,a1                       ;add to a1    
+0000050C  5387                     826      sub.l   #01,d7                      ;decrease current height count
+0000050E  4E75                     827      rts
+00000510                           828      
+00000510                           829  ConvertToBigEndian:
+00000510                           830  
+00000510  E15C                     831      rol.w   #$08,d4
+00000512  4844                     832      swap    d4
+00000514  E15C                     833      rol.w   #$08,d4
+00000516                           834      ;move.b  d4,d5
+00000516                           835      ;lsr.l   #$08,d4
+00000516                           836      ;lsl.l   #$08,d5
+00000516                           837      ;move.b  d4,d5
+00000516                           838      ;lsr.l   #$08,d4
+00000516                           839      ;lsl.l   #$08,d5
+00000516                           840      ;move.b  d4,d5
+00000516                           841      ;lsr.l   #$08,d4
+00000516                           842      ;lsl.l   #$08,d5
+00000516                           843      ;move.b  d4,d5
+00000516                           844      ;move.l  d5,d4
+00000516  4E75                     845      rts
+00000518                           846      
+00000518                           847  ConvertToBGR:   
+00000518                           848      
+00000518  E08C                     849      lsr.l   #$08,d4
+0000051A                           850      
+0000051A                           851      ;move.b  d4,d5
+0000051A                           852      ;lsr.l   #$08,d4
+0000051A                           853      ;swap    d5
+0000051A                           854      ;lsl.l   #$08,d5
+0000051A                           855      ;add.l  d5,d4
+0000051A                           856      
+0000051A  4E75                     857      rts
+0000051C                           858      
+0000051C                           859          
+0000051C                           860     
+0000051C= 46 69 6C 65 20 6E ...    861  NotBMP  dc.b    'File not a Bitmap',0
+0000052E= 42 4D 50 20 69 73 ...    862  Not32Bit    dc.b    'BMP is not in 32-bit format',0
+0000054A                           863  
+0000054A                           864  
+0000054A                           865  
+0000054A                           866  
+0000054A                           867  
+0000054A                           868  
+0000054A                           869  
+0000054A                           870  
+0000054A                           871  
+0000054A                           872  
+0000054A                           873  
+0000054A                           874  
+0000054A                           875  
+0000054A                           876  
+0000054A                           877  
+0000054A                           878  
+0000054A                           879  -------------------- end include --------------------
+0000054A                           880   
+0000054A                           881   ;d1 - Player Pos
+0000054A                           882   ;d2 - widt high
+0000054A                           883   ;d3 - Absolute velocity long
+0000054A                           884   INCLUDE    ag_Draw_Paddles.x68
+0000054A                           885  
+0000054A                           886  
+0000054A                           887  ;---
+0000054A                           888  ;Stack Offset Vals for Update
+0000054A                           889  ;---
+0000054A  =00000000                890  P_UPDATE_POS_Y          EQU             0
+0000054A  =00000004                891  P_UPDATE_WIDTH          EQU             4
+0000054A  =00000006                892  P_UPDATE_HEIGHT         EQU             6
+0000054A  =00000008                893  P_UPDATE_VELOCITY       EQU             8
+0000054A                           894  
+0000054A                           895  
+0000054A                           896  ;---
+0000054A                           897  ;Stack Offset Vals for Draw
+0000054A                           898  ;---
+0000054A  =00000000                899  P_DRAW_POS_X            EQU             0
+0000054A  =00000004                900  P_DRAW_POS_Y            EQU             4
+0000054A  =00000008                901  P_DRAW_WIDTH            EQU             8
+0000054A  =0000000A                902  P_DRAW_HEIGHT           EQU             10
+0000054A  =0000000C                903  P_DRAW_FILL             EQU             12
+0000054A  =00000010                904  P_DRAW_OUTLINE          EQU             16
+0000054A                           905  
+0000054A                           906  ;PLAYER_REG              REG             D1-D3
+0000054A                           907  
+0000054A                           908  
+0000054A                           909  ;d0 = Paddle Pos Y
+0000054A                           910  ;d1 = Paddle Width/Height High.W Low.W
+0000054A                           911  ;d2 = Paddle Velocity
+0000054A                           912  
+0000054A                           913  ag_UpdatePlayer:
+0000054A                           914  
+0000054A  48E7 FFFE                915      movem.l ALL_REG,-(sp)  
+0000054E                           916      
+0000054E  4281                     917      clr.l   d1
+00000550  4286                     918      clr.l   d6
+00000552  4287                     919      clr.l   d7
+00000554                           920      
+00000554  7007                     921      move.l  #CHECK_INPUT,d0
+00000556  4E4F                     922      TRAP #15
+00000558                           923      
+00000558                           924      ;---
+00000558                           925      ;Check if input is 0
+00000558                           926      ;---
+00000558  B23C 0000                927      cmp.b   #0,d1       
+0000055C  6700 006E                928      BEQ     .ag_P_Exit
+00000560                           929      
+00000560  7005                     930      move.l  #READ_CHAR,d0
+00000562  4E4F                     931      TRAP    #15
+00000564                           932      
+00000564                           933      ;---
+00000564                           934      ;Checking if W pressed  
+00000564                           935      ;---  
+00000564  B23C 0077                936      cmp.b   #W_Key,d1
+00000568  6600 0022                937      BNE     .ag_CheckDown                   ;W is not being pressed
+0000056C                           938      
+0000056C  2C2F 0000                939      move.l  P_UPDATE_POS_Y(sp),d6             ;Take Y Value
+00000570                           940      
+00000570  9CAF 0008                941      sub.l   P_UPDATE_VELOCITY(sp),d6          ;Subtract velocity from position to go up (decrease)
+00000574  BCBC 00000000            942      cmp.l   #0,d6
+0000057A  6F00 000A                943      BLE     .ag_At_Min_Y                   ;If less or equal to zero, we are at min height
+0000057E                           944      
+0000057E  2F46 0000                945      move.l  d6,P_UPDATE_POS_Y(sp)
+00000582  6000 0008                946      BRA     .ag_CheckDown
+00000586                           947      
+00000586                           948  .ag_At_Min_Y
+00000586  7C00                     949      move.l  #0,d6                               ;Set Y pos to 0
+00000588  2F46 0000                950      move.l  d6,P_UPDATE_POS_Y(sp)               ;Save to stack
+0000058C                           951      
+0000058C                           952      
+0000058C                           953  .ag_CheckDown    
+0000058C                           954      
+0000058C  B23C 0073                955      cmp.b   #S_Key,d1
+00000590  6600 003A                956      BNE     .ag_P_Exit                          ;If not holding S, Exit update                        
+00000594                           957      
+00000594  2C2F 0000                958      move.l  P_UPDATE_POS_Y(sp),d6               ;Move PosY to d6    (Fixed point)
+00000598  DCAF 0008                959      add.l   P_UPDATE_VELOCITY(sp),d6            ;Add Velocty to d6 (Fixed Point)
+0000059C                           960      
+0000059C                           961      ;Check if + velocity is out of bounds for upper y
+0000059C  4287                     962      clr.l   d7
+0000059E  3E2F 0006                963      move.w  P_UPDATE_HEIGHT(sp),d7              
+000005A2  E187                     964      asl.l   #8,d7                                   ;Height is not in fixed point                          
+000005A4  DE86                     965      add.l   d6,d7                                   ;Add height to get upper y from lower y
+000005A6                           966      
+000005A6  BEBC 0001A400            967      cmp.l   #(OUTPUT_MAX_HEIGHT)<<8,d7                   ;Check if upper y will now be out of bounds
+000005AC  6C00 000A                968      BGE     .ag_At_Max_Y                            ;If greater or equal to max, branch to max Y
+000005B0                           969      
+000005B0  2F46 0000                970      move.l  d6,P_UPDATE_POS_Y(sp)                   ;Else, new pos is not out of bounds, so log it
+000005B4  6000 0016                971      bra     .ag_P_Exit
+000005B8                           972      
+000005B8                           973  .ag_At_Max_Y
+000005B8  4287                     974      clr.l   d7
+000005BA  2C3C 0001A400            975      move.l  #(OUTPUT_MAX_HEIGHT)<<8,d6
+000005C0  3E2F 0006                976      move.w  P_UPDATE_HEIGHT(sp),d7
+000005C4  E187                     977      asl.l   #8,d7
+000005C6  9C87                     978      sub.l   d7,d6                                   ;Set d6 max to max output height - paddle height
+000005C8  2F46 0000                979      move.l  d6,P_UPDATE_POS_Y(sp)
+000005CC                           980      
+000005CC                           981  .ag_P_Exit
+000005CC  4CDF 7FFF                982      movem.l (sp)+,ALL_REG
+000005D0  4E75                     983      rts
+000005D2                           984      
+000005D2                           985      
+000005D2                           986      
+000005D2                           987      
+000005D2                           988  ag_UpdateEnemy
+000005D2                           989      
+000005D2  48E7 FFFE                990      movem.l ALL_REG,-(sp)
+000005D6                           991      
+000005D6  4281                     992      clr.l   d1
+000005D8  4287                     993      clr.l   d7
+000005DA  4286                     994      clr.l   d6
+000005DC                           995      
+000005DC                           996      ;Get Pos Y and add velocity to get new Pos
+000005DC  2C2F 0000                997      move.l  P_UPDATE_POS_Y(sp),d6
+000005E0  DCAF 0008                998      add.l   P_UPDATE_VELOCITY(sp),d6
+000005E4                           999      
+000005E4                          1000  .ag_E_CheckMin    
+000005E4                          1001      ;Check if at min y value
+000005E4  BCBC 00000000           1002      cmp.l   #0,d6       
+000005EA  6F00 001C               1003      BLE     .ag_E_At_Min_Y      ;If at or below min value, go to At Min
+000005EE                          1004     
+000005EE                          1005  .ag_E_CheckMax    
+000005EE  3E2F 0006               1006      move.w  P_UPDATE_HEIGHT(sp),d7
+000005F2  E187                    1007      asl.l   #8,d7
+000005F4  DE86                    1008      add.l   d6,d7                           ;Add Pos to Height to get Upper Y
+000005F6                          1009      
+000005F6  BEBC 0001A400           1010      cmp.l   #(OUTPUT_MAX_HEIGHT)<<8,d7                ;Check if upper y will now be out of bounds
+000005FC  6C00 001E               1011      BGE     .ag_E_At_Max_Y
+00000600                          1012      
+00000600  2F46 0000               1013      move.l  d6,P_UPDATE_POS_Y(sp)
+00000604  6000 0034               1014      BRA     .ag_E_Exit
+00000608                          1015      
+00000608                          1016  .ag_E_At_Min_Y
+00000608  7C00                    1017      move.l  #0,d6
+0000060A  2F46 0000               1018      move.l  d6,P_UPDATE_POS_Y(sp)     ;Set pos y to 0 and assign to stack
+0000060E                          1019      
+0000060E  7C00                    1020      move.l  #0,d6
+00000610  9CAF 0008               1021      sub.l   P_UPDATE_VELOCITY(sp),d6
+00000614  2F46 0008               1022      move.l  d6,P_UPDATE_VELOCITY(sp)
+00000618  6000 0020               1023      BRA     .ag_E_Exit                       ;Branch to draw after velocity is inverted
+0000061C                          1024       
+0000061C                          1025  .ag_E_At_Max_Y 
+0000061C                          1026      
+0000061C  2C3C 0001A400           1027      move.l  #(OUTPUT_MAX_HEIGHT)<<8,d6
+00000622                          1028      
+00000622                          1029      ;Get Height and convert to fixed point
+00000622  4287                    1030      clr.l   d7
+00000624  3E2F 0006               1031      move.w  P_UPDATE_HEIGHT(sp),d7
+00000628  E187                    1032      asl.l   #8,d7
+0000062A                          1033      
+0000062A                          1034      ;Set d6 max to max output height - paddle height
+0000062A  9C87                    1035      sub.l   d7,d6                           
+0000062C  2F46 0000               1036      move.l  d6,P_UPDATE_POS_Y(sp)
+00000630                          1037      
+00000630                          1038      ;Invert Velocity
+00000630  4286                    1039      clr.l   d6                              ;set d6 to zero and use it to invert velocity
+00000632  9CAF 0008               1040      sub.l   P_UPDATE_VELOCITY(sp),d6
+00000636  2F46 0008               1041      move.l  d6,P_UPDATE_VELOCITY(sp)
+0000063A                          1042      
+0000063A                          1043  .ag_E_Exit
+0000063A  4CDF 7FFF               1044      movem.l (sp)+,ALL_REG
+0000063E  4E75                    1045      rts
+00000640                          1046      
+00000640                          1047      
+00000640                          1048  ;d0 = Pos X
+00000640                          1049  ;d1 = Pos Y
+00000640                          1050  ;d2 = Paddle Width/Height Hi.W Low.W
+00000640                          1051  ;d3 = Fill Color
+00000640                          1052  ;d4 = Outline color
+00000640                          1053  
+00000640                          1054  ag_DrawPaddle:
+00000640                          1055      
+00000640  48E7 FFFE               1056      movem.l ALL_REG,-(sp)
+00000644                          1057      
+00000644  222F 0010               1058      move.l  P_DRAW_OUTLINE(sp),d1    
+00000648  7050                    1059      move.l  #SET_PEN_COLOR,d0   
+0000064A  4E4F                    1060      TRAP    #15
+0000064C                          1061      
+0000064C  222F 000C               1062      move.l  P_DRAW_FILL(sp),d1
+00000650  7051                    1063      move.l  #SET_FILL_COLOR,d0
+00000652  4E4F                    1064      TRAP    #15
+00000654                          1065      
+00000654                          1066      
+00000654  4281                    1067      clr.l   d1
+00000656  4282                    1068      clr.l   d2
+00000658  4283                    1069      clr.l   d3
+0000065A  4284                    1070      clr.l   d4
+0000065C                          1071      
+0000065C  222F 0000               1072      move.l  P_DRAW_POS_X(sp),d1     ;LeftX
+00000660  E081                    1073      asr.l   #8,d1
+00000662  282F 0004               1074      move.l  P_DRAW_POS_Y(sp),d4     ;LowerY  
+00000666  E084                    1075      asr.l   #8,d4
+00000668                          1076      
+00000668  2601                    1077      move.l  d1,d3
+0000066A  D66F 0008               1078      add.w   P_DRAW_WIDTH(sp),d3     ;RightX
+0000066E                          1079      
+0000066E  2404                    1080      move.l  d4,d2
+00000670  D86F 000A               1081      add.w   P_DRAW_HEIGHT(sp),d4    ;UpperY
+00000674                          1082      
+00000674  7057                    1083      move.l  #DRAW_FRECT,d0
+00000676  4E4F                    1084      TRAP #15
+00000678                          1085      
+00000678  4CDF 7FFF               1086      movem.l (sp)+,ALL_REG
+0000067C  4E75                    1087      rts
+0000067E                          1088      
+0000067E                          1089  
+0000067E                          1090          
+0000067E                          1091  
+0000067E                          1092  
+0000067E                          1093  
+0000067E                          1094  
+0000067E                          1095  
+0000067E                          1096  
+0000067E                          1097  -------------------- end include --------------------
+0000067E                          1098   
+0000067E                          1099  
+0000067E                          1100  ;d0 holds score pos 
+0000067E                          1101  ag_DrawScoreBG:
+0000067E  48E7 FFFE               1102      movem.l     ALL_REG,-(sp)
+00000682  4281                    1103      clr.l       d1
+00000684  4282                    1104      clr.l       d2
+00000686  4283                    1105      clr.l       d3
+00000688  4284                    1106      clr.l       d4
+0000068A                          1107      
+0000068A  7050                    1108      move.l      #SET_PEN_COLOR,d0
+0000068C  223C 00825363           1109      move.l      #SCOREBOARD_FILL_COLOR,d1
+00000692  4E4F                    1110      TRAP        #15
+00000694                          1111      
+00000694  7051                    1112      move.l      #SET_FILL_COLOR,d0
+00000696  4E4F                    1113      TRAP        #15
+00000698                          1114      
+00000698  2217                    1115      move.l      (sp),d1
+0000069A  3401                    1116      move.w      d1,d2               ;Move Y to d2 (Upper)
+0000069C  3801                    1117      move.w      d1,d4               ;Move Y to d4 (Lower)
+0000069E  4841                    1118      swap        d1                  ;Make X val lower word
+000006A0  3601                    1119      move.w      d1,d3               ;Left X => Right X
+000006A2  2039 003866BA           1120      move.l      (LEDSize),d0
+000006A8  D840                    1121      add.w       d0,d4               ;Add to Lower Y LED height
+000006AA  4840                    1122      swap        d0
+000006AC  D640                    1123      add.w       d0,d3               ;Add to Right X LED Width
+000006AE  D640                    1124      add.w       d0,d3               ;Add another width for the second LED
+000006B0                          1125      
+000006B0  2039 003866BE           1126      move.l      (LEDPadding),d0
+000006B6  4840                    1127      swap        d0
+000006B8  D640                    1128      add.w       d0,d3               ;Add Padding between LED
+000006BA                          1129  
+000006BA  7057                    1130      move.l      #DRAW_FRECT,d0
+000006BC  4E4F                    1131      TRAP        #15       
+000006BE                          1132      
+000006BE  4CDF 7FFF               1133      movem.l     (sp)+,ALL_REG
+000006C2  4E75                    1134      rts
+000006C4                          1135  
+000006C4                          1136  ;d0 = value    
+000006C4                          1137  ag_AbsVal:
+000006C4  48E7 FFFE               1138      movem.l     All_REG,-(sp)
+000006C8                          1139      
+000006C8  0C97 00000000           1140      cmpi.l       #0,(sp)
+000006CE  6D00 0006               1141      BLT         .av_Negative
+000006D2  6000 0008               1142      BRA         .av_Exit            ;If positive, thats good, no need to do anything
+000006D6                          1143    
+000006D6                          1144  .av_Negative
+000006D6  4280                    1145      clr.l       d0                  ;Set to 0
+000006D8  9097                    1146      sub.l       (sp),d0             ; 0 - negative = positive
+000006DA  2E80                    1147      move.l      d0,(sp)             ;Log new positive value
+000006DC                          1148      
+000006DC                          1149  .av_Exit
+000006DC  4CDF 7FFF               1150      movem.l     (sp)+,ALL_REG
+000006E0  4E75                    1151      rts
+000006E2                          1152  
+000006E2                          1153  
+00002000                          1154      ORG    $2000
+00002000                          1155  
+00002000                          1156      
+00002000                          1157  START:                  ; first instruction of program
+00002000                          1158  
+00002000                          1159  * Put program code here
+00002000                          1160  
+00002000                          1161     ;SAVE NECESSARY STACK DATA TO HAVE READY TO GO PARTITIONS
+00002000                          1162  
+00002000                          1163  main_Start
+00002000  41F9 000025D2           1164      lea BitmapBG,a0
+00002006                          1165      ;jsr drawBMP                                 ;Draw full bitmap image
+00002006                          1166      
+00002006  43F9 003866DE           1167      lea     GAME_START_SOUND,a1
+0000200C  7200                    1168      move.l  #0,d1
+0000200E  7400                    1169      move.l  #0,d2
+00002010  7049                    1170      move.l  #PLAY_SOUND,d0
+00002012  4E4F                    1171      TRAP    #15
+00002014                          1172      
+00002014  705C                    1173      move.l  #DOUBLE_BUFFER,d0                   ;Enable Double Buffer mode
+00002016  4281                    1174      clr.l   d1
+00002018  123C 0011               1175      move.b  #17,d1
+0000201C  4E4F                    1176      TRAP #15
+0000201E                          1177      
+0000201E  4281                    1178      clr.l   d1
+00002020  700C                    1179      move.l  #KEYBOARD_ECHO,d0                   ;Turn off keyboard echo
+00002022  4E4F                    1180      TRAP #15
+00002024                          1181      
+00002024                          1182      
+00002024                          1183      
+00002024  23FC 0000F000 003866AA  1184      move.l  #(OUTPUT_SCREEN_HEIGHT/2)<<8,(Ball_PositionY)
+0000202E  23FC 00014000 003866A6  1185      move.l  #(OUTPUT_MAX_WIDTH/2)<<8,(Ball_PositionX)
+00002038                          1186      ;---
+00002038                          1187      ;Initialize Last Pos
+00002038                          1188      ;---
+00002038  23F9 0038667E 00386686  1189      move.l  (Player_PositionY),(Last_Player_PosY)
+00002042                          1190      
+00002042  23F9 00386692 0038669A  1191      move.l  (Enemy_PositionY),(Last_Enemy_PosY)
+0000204C                          1192      
+0000204C  23F9 003866A6 003866AE  1193      move.l  (Ball_PositionX),(Last_Ball_PosX)
+00002056  23F9 003866AA 003866B2  1194      move.l  (Ball_PositionY),(Last_Ball_PosY)
+00002060                          1195      
+00002060                          1196      ;---
+00002060                          1197      ;Draw Player Before Everything
+00002060                          1198      ;----
+00002060                          1199      
+00002060  2039 0038667A           1200      move.l  Player_PositionX,d0
+00002066  2239 0038667E           1201      move.l  Player_PositionY,d1
+0000206C  2439 003866A2           1202      move.l  Paddle_Size,d2
+00002072  263C 00FFFFFF           1203      move.l  #PLAYER_FILL_COLOR,d3
+00002078  7800                    1204      move.l  #PADDLE_OUTLINE,d4
+0000207A                          1205      
+0000207A  4EB8 0640               1206      jsr ag_DrawPaddle
+0000207E                          1207      
+0000207E                          1208      ;---
+0000207E                          1209      ;Draw Score Area
+0000207E                          1210      ;---
+0000207E  7051                    1211      move.l  #SET_FILL_COLOR,d0
+00002080  223C 00825363           1212      move.l  #SCOREBOARD_FILL_COLOR,d1
+00002086  4E4F                    1213      TRAP    #15
+00002088                          1214      
+00002088  7050                    1215      move.l  #SET_PEN_COLOR,d0
+0000208A  223C 00FFFFFF           1216      move.l  #SCOREBOARD_EDGE_COLOR,d1
+00002090  4E4F                    1217      TRAP    #15
+00002092                          1218      
+00002092  7057                    1219      move.l  #DRAW_FRECT,d0
+00002094  72FF                    1220      move.l  #(-1),d1
+00002096  243C 000001E0           1221      move.l  #OUTPUT_SCREEN_HEIGHT,d2
+0000209C  263C 00000280           1222      move.l  #OUTPUT_MAX_WIDTH,d3
+000020A2  283C 000001A5           1223      move.l  #(OUTPUT_MAX_HEIGHT+1),d4
+000020A8  4E4F                    1224      TRAP    #15
+000020AA                          1225      
+000020AA                          1226      ;---
+000020AA                          1227      ;Draw LEDs at start and set last Score and set Position
+000020AA                          1228      ;---
+000020AA                          1229      
+000020AA                          1230      ;Set Player Pos LED
+000020AA  203C 000001E0           1231      move.l  #(OUTPUT_SCREEN_HEIGHT),d0
+000020B0  2239 003866BE           1232      move.l  (LEDPadding),d1
+000020B6  2439 003866BA           1233      move.l  (LEDSize),d2
+000020BC                          1234      
+000020BC                          1235      ;Get Y val
+000020BC  9041                    1236      sub.w   d1,d0                   ;Subtract y padding from screen height
+000020BE  9042                    1237      sub.w   d2,d0                   ;Subtract actual LED size from height
+000020C0                          1238      
+000020C0                          1239      ;Get X Val
+000020C0  4840                    1240      swap    d0
+000020C2  303C 0280               1241      move.w  #(OUTPUT_MAX_WIDTH),d0
+000020C6  4841                    1242      swap    d1
+000020C8  4842                    1243      swap    d2
+000020CA  9041                    1244      sub.w   d1,d0                   ;Subtract Padding only once for X val
+000020CC  9042                    1245      sub.w   d2,d0                   ;Subtract X size from Width
+000020CE                          1246      
+000020CE                          1247      ;Set Pos For Rightmost LED (of 2)
+000020CE  9041                    1248      sub.w   d1,d0                   ;Subtract Padding again In Between LEDs
+000020D0  9042                    1249      sub.w   d2,d0                   ;Subtract X size from Width
+000020D2                          1250          
+000020D2                          1251      ;We now have the position for
+000020D2  4840                    1252      swap    d0
+000020D4  23C0 003866C2           1253      move.l  d0,(PlayerScorePos)
+000020DA  23F9 003866C6 003866CA  1254      move.l  (PlayerScore),(Last_PlayerScore)
+000020E4                          1255      
+000020E4                          1256      ;Set Enemy LED
+000020E4  4840                    1257      swap    d0                      ;Only need to edit the X val
+000020E6  303C 0000               1258      move.w  #0,d0
+000020EA  D041                    1259      add.w   d1,d0                   ;Add Padding Once
+000020EC  4840                    1260      swap    d0
+000020EE  23C0 003866CE           1261      move.l  d0,(EnemyScorePos)
+000020F4                          1262      
+000020F4  23F9 003866D2 003866D6  1263      move.l  (EnemyScore),(Last_EnemyScore)
+000020FE                          1264      
+000020FE                          1265      ;---
+000020FE                          1266      ;Draw LEDs at 0
+000020FE                          1267      ;---
+000020FE                          1268      ;Draw Player Score 
+000020FE  2239 003866C2           1269      move.l  (PlayerScorePos),d1  
+00002104  2039 003866C6           1270      move.l  (PlayerScore),d0
+0000210A  2439 003866BA           1271      move.l  (LEDSize),d2
+00002110                          1272      
+00002110                          1273      ;Draw 10s Digit   
+00002110  4EB8 0010               1274      jsr     ag_DrawScoreLED
+00002114                          1275      
+00002114                          1276      ;Add offset to X
+00002114  2639 003866BA           1277      move.l  (LEDSize),d3
+0000211A  2839 003866BE           1278      move.l  (LEDPadding),d4
+00002120                          1279      
+00002120                          1280      ;Get X values to lower Word
+00002120  4841                    1281      swap    d1
+00002122  4843                    1282      swap    d3
+00002124  4844                    1283      swap    d4
+00002126                          1284      
+00002126                          1285      ;Add
+00002126  D243                    1286      add.w   d3,d1
+00002128  D244                    1287      add.w   d4,d1
+0000212A                          1288      
+0000212A                          1289      ;Swap back to X,Y format
+0000212A  4841                    1290      swap    d1
+0000212C  4EB8 0010               1291      jsr     ag_DrawScoreLED
+00002130                          1292      
+00002130                          1293      
+00002130                          1294      ;Draw Enemy Score 
+00002130  2239 003866CE           1295      move.l  (EnemyScorePos),d1   
+00002136  2039 003866D2           1296      move.l  (EnemyScore),d0
+0000213C  2439 003866BA           1297      move.l  (LEDSize),d2
+00002142                          1298       
+00002142  4EB8 0010               1299      jsr     ag_DrawScoreLED
+00002146                          1300      
+00002146                          1301      ;Add offset to X
+00002146  2639 003866BA           1302      move.l  (LEDSize),d3
+0000214C  2839 003866BE           1303      move.l  (LEDPadding),d4
+00002152                          1304      
+00002152                          1305      ;Get X values to lower Word
+00002152  4841                    1306      swap    d1
+00002154  4843                    1307      swap    d3
+00002156  4844                    1308      swap    d4
+00002158                          1309      
+00002158                          1310      ;Add
+00002158  D243                    1311      add.w   d3,d1
+0000215A  D244                    1312      add.w   d4,d1
+0000215C                          1313      
+0000215C                          1314      ;Swap back to X,Y format
+0000215C  4841                    1315      swap    d1
+0000215E  4EB8 0010               1316      jsr     ag_DrawScoreLED
+00002162                          1317      
+00002162                          1318  gameloop:        
+00002162                          1319      ;---
+00002162                          1320      ;Update Player Paddle
+00002162                          1321      ;---
+00002162                          1322      
+00002162  2039 0038667E           1323      move.l  (Player_PositionY),d0
+00002168  2239 003866A2           1324      move.l  (Paddle_Size),d1
+0000216E  2439 0038668A           1325      move.l  (Player_Velocity),d2
+00002174                          1326      
+00002174  4EB8 054A               1327      jsr     ag_UpdatePlayer
+00002178                          1328      
+00002178  23C0 0038667E           1329      move.l  d0,(Player_PositionY)
+0000217E                          1330      
+0000217E                          1331      ;---
+0000217E                          1332      ;Update Enemy Paddle
+0000217E                          1333      ;---
+0000217E                          1334      
+0000217E  2039 00386692           1335      move.l  (Enemy_PositionY),d0
+00002184  2239 003866A2           1336      move.l  (Paddle_Size),d1
+0000218A  2439 0038669E           1337      move.l  (Enemy_Velocity),d2
+00002190                          1338      
+00002190  4EB8 05D2               1339      jsr     ag_UpdateEnemy
+00002194                          1340      
+00002194  23C0 00386692           1341      move.l  d0,(Enemy_PositionY)
+0000219A  23C2 0038669E           1342      move.l  d2,(Enemy_Velocity)
+000021A0                          1343      
+000021A0                          1344      ;---
+000021A0                          1345      ;Update Ball Position
+000021A0                          1346      ;---
+000021A0  2039 003866A6           1347      move.l  (Ball_PositionX),d0
+000021A6  2239 003866AA           1348      move.l  (Ball_PositionY),d1
+000021AC  2439 003866B6           1349      move.l  (Ball_Velocity),d2
+000021B2  2639 0038667A           1350      move.l  (Player_PositionX),d3
+000021B8  2839 0038667E           1351      move.l  (Player_PositionY),d4
+000021BE  2A39 0038668E           1352      move.l  (Enemy_PositionX),d5
+000021C4  2C39 00386692           1353      move.l  (Enemy_PositionY),d6
+000021CA  2E39 003866A2           1354      move.l  (Paddle_Size),d7
+000021D0                          1355      
+000021D0                          1356      
+000021D0  41F9 003866C6           1357      lea     PlayerScore,a0          ;Score Return Player
+000021D6  43F9 003866D2           1358      lea     EnemyScore,a1           ;Score Return Player
+000021DC                          1359      
+000021DC  4EB8 0162               1360      jsr ag_UpdateBall
+000021E0                          1361      
+000021E0                          1362      
+000021E0  23C0 003866A6           1363      move.l  d0,(Ball_PositionX)                 ;Save Position X
+000021E6  23C1 003866AA           1364      move.l  d1,(Ball_PositionY)                 ;Save Position Y
+000021EC  23C2 003866B6           1365      move.l  d2,(Ball_Velocity)                 ;Save Velocity
+000021F2                          1366         
+000021F2                          1367         
+000021F2                          1368      ;------------------------
+000021F2                          1369      ;DRAW BITMAP FOR SECTIONS
+000021F2                          1370      ;------------------------   
+000021F2                          1371      ;---
+000021F2                          1372      ;Check if we need to draw Bitmap for the ball
+000021F2                          1373      ;---   
+000021F2                          1374      
+000021F2                          1375      ;Compare Ball curr Pos to Prev Pos, Same means no need to refresh bitmap
+000021F2  2039 003866A6           1376      move.l  (Ball_PositionX),d0
+000021F8  2239 003866AE           1377      move.l  (Last_Ball_PosX),d1
+000021FE  E080                    1378      asr.l   #8,d0
+00002200  E081                    1379      asr.l   #8,d1
+00002202  B280                    1380      cmp.l   d0,d1
+00002204  6600 0018               1381      BNE     .main_BM_Ball                  ;If x isn't equal, then we need to redraw
+00002208                          1382      
+00002208                          1383      ;Check If Y isn't the same if X is the same
+00002208  2039 003866AA           1384      move.l  (Ball_PositionY),d0
+0000220E  2239 003866B2           1385      move.l  (Last_Ball_PosY),d1
+00002214  E080                    1386      asr.l   #8,d0
+00002216  E081                    1387      asr.l   #8,d1
+00002218  B280                    1388      cmp.l   d0,d1
+0000221A  6700 0032               1389      BEQ     .main_BM_Player            ;If they are equal, then both x and y are equal, dont draw ball
+0000221E                          1390      
+0000221E                          1391      ;---   
+0000221E                          1392      ;Draw Bitmap For Ball
+0000221E                          1393      ;---
+0000221E                          1394  .main_BM_Ball
+0000221E                          1395  
+0000221E  41F9 000025D2           1396      lea     BitmapBG,a0
+00002224                          1397      
+00002224                          1398      ;Chunk Offset
+00002224                          1399      ;Get Pos Values then take out of fixed point
+00002224  2039 003866AE           1400      move.l  (Last_Ball_PosX),d0
+0000222A  2239 003866B2           1401      move.l  (Last_Ball_PosY),d1
+00002230  E080                    1402      asr.l   #8,d0
+00002232  E081                    1403      asr.l   #8,d1
+00002234  2400                    1404      move.l  d0,d2
+00002236  4842                    1405      swap    d2
+00002238  3401                    1406      move.w  d1,d2
+0000223A                          1407      
+0000223A                          1408      ;Chunk W/H
+0000223A  7614                    1409      move.l  #BALL_DIAMETER,d3
+0000223C  4843                    1410      swap    d3
+0000223E  363C 0014               1411      move.w  #BALL_DIAMETER,d3
+00002242  0683 00010001           1412      add.l   #BITMAP_BUFFER,d3           ;little bit of bits for buffer
+00002248                          1413      
+00002248                          1414      ;Output Offset
+00002248  2802                    1415      move.l  d2,d4
+0000224A                          1416      
+0000224A  4EB8 037E               1417      jsr     DrawBMP
+0000224E                          1418     
+0000224E                          1419     
+0000224E                          1420  .main_BM_Player    
+0000224E                          1421      ;---
+0000224E                          1422      ;Check if we need to draw Bitmap for player
+0000224E                          1423      ;---
+0000224E  2239 0038667E           1424      move.l   (Player_PositionY),d1
+00002254                          1425     
+00002254                          1426     ;Compare Player curr PosY to Prev Pos Y, Same means, dont draw
+00002254  2401                    1427      move.l  d1,d2
+00002256  E082                    1428      asr.l   #8,d2
+00002258  2639 00386686           1429      move.l  (Last_Player_PosY),d3
+0000225E  E083                    1430      asr.l   #8,d3
+00002260  B682                    1431      cmp.l   d2,d3
+00002262  6700 0076               1432      BEQ     .main_BM_Enemy  
+00002266                          1433      
+00002266                          1434      ;---
+00002266                          1435      ;Draw Bitmap for Player
+00002266                          1436      ;---
+00002266                          1437            
+00002266  9483                    1438      sub.l   d3,d2       ;Have d2 hold the difference between the current and last
+00002268  B4BC 00000000           1439      cmp.l   #0,d2       ;Negative or positive?
+0000226E  6D00 002A               1440      BLT     .p_NegDisp  ;Less than zero means negative Disp (paddle went upwards/negatively)
+00002272                          1441  
+00002272                          1442      ;Otherwise, paddle went downwards/positively (Use last pos as chunk start)
+00002272  2639 003866A2           1443      move.l  (Paddle_Size),d3    ;Get chunk Size xxxx yyyy
+00002278  3602                    1444      move.w  d2,d3               ;Move lower word of d2 to chunk size
+0000227A  0683 00010001           1445      add.l   #BITMAP_BUFFER,d3
+00002280                          1446      
+00002280                          1447      ;Get Chunk Offset
+00002280  2439 0038667A           1448      move.l  (Player_PositionX),d2
+00002286  2239 00386686           1449      move.l  (Last_Player_PosY),d1
+0000228C  E082                    1450      asr.l   #8,d2
+0000228E  E081                    1451      asr.l   #8,d1
+00002290  4842                    1452      swap    d2
+00002292  3401                    1453      move.w  d1,d2    
+00002294                          1454  
+00002294                          1455      ;Get Output Offset
+00002294  2802                    1456      move.l  d2,d4                  
+00002296  6000 0038               1457      BRA     .draw_BM_Player
+0000229A                          1458          
+0000229A                          1459  .p_NegDisp              
+0000229A  2002                    1460      move.l  d2,d0       ;Prepare for getting abs value
+0000229C                          1461          
+0000229C                          1462      ;d0 now holds ChunkSizeY
+0000229C  4EB8 06C4               1463      jsr     ag_AbsVal
+000022A0                          1464      
+000022A0                          1465      ;Set chunk size
+000022A0  2639 003866A2           1466      move.l  (Paddle_Size),d3    ;X value for paddle chunk size and move new Y value into lower half (y)        
+000022A6  3600                    1467      move.w  d0,d3               ;Get the Y displacement into lower.w d3
+000022A8  0683 00010001           1468      add.l   #BITMAP_BUFFER,d3
+000022AE                          1469      
+000022AE                          1470      ;Paddle went upwards, so use current + paddle height as chunk offset
+000022AE  2439 0038667E           1471      move.l  (Player_PositionY),d2       ;Get Player Curr Y
+000022B4  E082                    1472      asr.l   #8,d2
+000022B6                          1473      
+000022B6  2039 003866A2           1474      move.l  (Paddle_Size),d0            ;Get Paddle Size
+000022BC  4281                    1475      clr.l   d1
+000022BE  3200                    1476      move.w  d0,d1                       ;Grab only the height
+000022C0  D481                    1477      add.l   d1,d2                       ;Add Height + current
+000022C2                          1478      
+000022C2  2039 0038667A           1479      move.l  (Player_PositionX),d0       ;Get Player Curr X
+000022C8  E080                    1480      asr.l   #8,d0
+000022CA  4840                    1481      swap    d0
+000022CC  D480                    1482      add.l   d0,d2                   ;X val stays the same, but current Y + height added to lower word
+000022CE                          1483      
+000022CE                          1484      ;Set Output offset
+000022CE  2802                    1485      move.l  d2,d4
+000022D0                          1486  
+000022D0                          1487  .draw_BM_Player    
+000022D0  41F9 000025D2           1488      lea     BitmapBG,a0
+000022D6                          1489      
+000022D6  4EB8 037E               1490      jsr     DrawBMP
+000022DA                          1491          
+000022DA                          1492          
+000022DA                          1493  
+000022DA                          1494  .main_BM_Enemy         
+000022DA                          1495      ;---
+000022DA                          1496      ;Check if we need to draw Bitmap for Enemy
+000022DA                          1497      ;---
+000022DA  2239 00386692           1498      move.l   (Enemy_PositionY),d1
+000022E0                          1499     
+000022E0                          1500      ;Compare Enemy curr PosY to Prev Pos Y, Same means, dont draw
+000022E0  2401                    1501      move.l  d1,d2
+000022E2  E082                    1502      asr.l   #8,d2
+000022E4  2639 0038669A           1503      move.l  (Last_Enemy_PosY),d3
+000022EA  E083                    1504      asr.l   #8,d3
+000022EC  B682                    1505      cmp.l   d2,d3
+000022EE  6700 0076               1506      BEQ     .main_DrawEntities    
+000022F2                          1507    
+000022F2                          1508      ;---
+000022F2                          1509      ;Draw Bitmap for Enemy
+000022F2                          1510      ;---
+000022F2  9483                    1511      sub.l   d3,d2       ;Have d2 hold the difference between the current and last
+000022F4  B4BC 00000000           1512      cmp.l   #0,d2       ;Negative or positive?
+000022FA  6D00 002A               1513      BLT     .e_NegDisp  ;Less than zero means negative Disp (paddle went upwards/negatively)
+000022FE                          1514  
+000022FE                          1515      ;Otherwise, paddle went downwards/positively (Use last pos as chunk start)
+000022FE  2639 003866A2           1516      move.l  (Paddle_Size),d3    ;Get chunk Size xxxx yyyy
+00002304  3602                    1517      move.w  d2,d3               ;Move lower word of d2 to chunk size
+00002306  0683 00010001           1518      add.l   #BITMAP_BUFFER,d3
+0000230C                          1519      
+0000230C                          1520      ;Get Chunk Offset
+0000230C  2439 0038668E           1521      move.l  (Enemy_PositionX),d2
+00002312  2239 0038669A           1522      move.l  (Last_Enemy_PosY),d1
+00002318  E082                    1523      asr.l   #8,d2
+0000231A  E081                    1524      asr.l   #8,d1
+0000231C  4842                    1525      swap    d2
+0000231E  3401                    1526      move.w  d1,d2    
+00002320                          1527  
+00002320                          1528      ;Get Output Offset
+00002320  2802                    1529      move.l  d2,d4                  
+00002322  6000 0038               1530      BRA     .draw_BM_Enemy
+00002326                          1531          
+00002326                          1532  .e_NegDisp              
+00002326  2002                    1533      move.l  d2,d0       ;Prepare for getting abs value
+00002328                          1534          
+00002328                          1535      ;d0 now holds ChunkSizeY
+00002328  4EB8 06C4               1536      jsr     ag_AbsVal
+0000232C                          1537      
+0000232C                          1538      ;Set chunk size
+0000232C  2639 003866A2           1539      move.l  (Paddle_Size),d3    ;X value for paddle chunk size and move new Y value into lower half (y)        
+00002332  3600                    1540      move.w  d0,d3               ;Get the Y displacement into lower.w d3
+00002334  0683 00010001           1541      add.l   #BITMAP_BUFFER,d3
+0000233A                          1542      
+0000233A                          1543      ;Paddle went upwards, so use current + paddle height as chunk offset
+0000233A  2439 00386692           1544      move.l  (Enemy_PositionY),d2       ;Get Player Curr Y
+00002340  E082                    1545      asr.l   #8,d2
+00002342                          1546      
+00002342  2039 003866A2           1547      move.l  (Paddle_Size),d0            ;Get Paddle Size
+00002348  4281                    1548      clr.l   d1
+0000234A  3200                    1549      move.w  d0,d1                       ;Grab only the height
+0000234C  D481                    1550      add.l   d1,d2                       ;Add Height + current
+0000234E                          1551      
+0000234E  2039 0038668E           1552      move.l  (Enemy_PositionX),d0       ;Get Enemy Curr X
+00002354  E080                    1553      asr.l   #8,d0
+00002356  4840                    1554      swap    d0
+00002358  D480                    1555      add.l   d0,d2                   ;X val stays the same, but current Y + height added to lower word
+0000235A                          1556      
+0000235A                          1557      ;Set Output offset
+0000235A  2802                    1558      move.l  d2,d4
+0000235C                          1559  
+0000235C                          1560  .draw_BM_Enemy    
+0000235C  41F9 000025D2           1561      lea     BitmapBG,a0
+00002362                          1562      
+00002362  4EB8 037E               1563      jsr     DrawBMP  
+00002366                          1564      
+00002366                          1565      
+00002366                          1566      ;------------------------------------
+00002366                          1567      ;START OF DRAWING NON-BITMAP ENTITIES
+00002366                          1568      ;------------------------------------
+00002366                          1569  .main_DrawEntities     
+00002366                          1570      ;---
+00002366                          1571      ;Draw Player Paddle
+00002366                          1572      ;---
+00002366                          1573  .main_DrawPlayer    
+00002366  2039 0038667A           1574      move.l  Player_PositionX,d0
+0000236C  2239 0038667E           1575      move.l  Player_PositionY,d1
+00002372                          1576      
+00002372                          1577      ;Compare Player curr PosY to Prev Pos Y, Same means, dont draw
+00002372  2401                    1578      move.l  d1,d2
+00002374  E082                    1579      asr.l   #8,d2
+00002376  2639 00386686           1580      move.l  (Last_Player_PosY),d3
+0000237C  E083                    1581      asr.l   #8,d3
+0000237E  B682                    1582      cmp.l   d2,d3
+00002380                          1583      ;BEQ     .main_DrawEnemy
+00002380                          1584      
+00002380  2439 003866A2           1585      move.l  Paddle_Size,d2
+00002386  263C 00FFFFFF           1586      move.l  #PLAYER_FILL_COLOR,d3
+0000238C  283C 00A0607B           1587      move.l  #ENEMY_FILL_COLOR,d4
+00002392                          1588      
+00002392  4EB8 0640               1589      jsr ag_DrawPaddle
+00002396                          1590      
+00002396  23C1 00386686           1591      move.l  d1,(Last_Player_PosY) 
+0000239C                          1592  
+0000239C                          1593                
+0000239C                          1594      ;---
+0000239C                          1595      ;Draw Enemy PAddle
+0000239C                          1596      ;---
+0000239C                          1597  .main_DrawEnemy    
+0000239C  2039 0038668E           1598      move.l  Enemy_PositionX,d0
+000023A2  2239 00386692           1599      move.l  Enemy_PositionY,d1
+000023A8                          1600      
+000023A8                          1601      ;Compare Enemy curr PosY to Prev Pos Y, Same means, dont draw
+000023A8  2401                    1602      move.l  d1,d2
+000023AA  E082                    1603      asr.l   #8,d2
+000023AC  2639 0038669A           1604      move.l  (Last_Enemy_PosY),d3
+000023B2  E083                    1605      asr.l   #8,d3
+000023B4  B682                    1606      cmp.l   d2,d3
+000023B6  6700 006E               1607      BEQ     .main_DrawLED
+000023BA                          1608  
+000023BA  2439 003866A2           1609      move.l  Paddle_Size,d2
+000023C0  263C 00A0607B           1610      move.l  #ENEMY_FILL_COLOR,d3
+000023C6  283C 00FFFFFF           1611      move.l  #ENEMY_EDGE_COLOR,d4
+000023CC                          1612      
+000023CC  4EB8 0640               1613      jsr ag_DrawPaddle
+000023D0                          1614      
+000023D0  23C1 0038669A           1615      move.l  d1,(Last_Enemy_PosY)
+000023D6                          1616  
+000023D6                          1617      ;---
+000023D6                          1618      ;Draw Ball At Position
+000023D6                          1619      ;---
+000023D6                          1620  .main_DrawBall 
+000023D6                          1621      ;Compare Ball curr Pos to Prev Pos, Same means don't draw
+000023D6  2039 003866A6           1622      move.l  (Ball_PositionX),d0
+000023DC  2239 003866AE           1623      move.l  (Last_Ball_PosX),d1
+000023E2  E080                    1624      asr.l   #8,d0
+000023E4  E081                    1625      asr.l   #8,d1
+000023E6  B280                    1626      cmp.l   d0,d1
+000023E8  6600 0018               1627      BNE     .b_DrawBall                  ;If x isn't equal, then we need to redraw
+000023EC                          1628      
+000023EC                          1629      ;Check If Y isn't the same if X is the same
+000023EC  2039 003866AA           1630      move.l  (Ball_PositionY),d0
+000023F2  2239 003866B2           1631      move.l  (Last_Ball_PosY),d1
+000023F8  E080                    1632      asr.l   #8,d0
+000023FA  E081                    1633      asr.l   #8,d1
+000023FC  B280                    1634      cmp.l   d0,d1
+000023FE  6700 FF66               1635      BEQ     .main_DrawPlayer            ;If they are equal, then both x and y are equal, dont draw ball
+00002402                          1636       
+00002402                          1637  .b_DrawBall   
+00002402  2039 003866A6           1638      move.l  (Ball_PositionX),d0
+00002408  2239 003866AA           1639      move.l  (Ball_PositionY),d1
+0000240E  4EB8 033E               1640      jsr ag_DrawBall
+00002412                          1641      
+00002412                          1642      ;Update values
+00002412  23F9 003866A6 003866AE  1643      move.l  (Ball_PositionX),(Last_Ball_PosX)
+0000241C  23F9 003866AA 003866B2  1644      move.l  (Ball_PositionY),(Last_Ball_PosY)
+00002426                          1645          
+00002426                          1646      
+00002426                          1647      ;---
+00002426                          1648      ;Draw LEDs
+00002426                          1649      ;---
+00002426                          1650  .main_DrawLED       
+00002426                          1651      ;---
+00002426                          1652      ;Draw Player Score
+00002426                          1653      ;---
+00002426                          1654      
+00002426                          1655      ;Compare Curr Score to Last
+00002426  2039 003866C6           1656      move.l  (PlayerScore),d0
+0000242C  2239 003866CA           1657      move.l  (Last_PlayerScore),d1
+00002432  B081                    1658      cmp.l   d1,d0
+00002434  6F00 0066               1659      BLE     .b_CheckEnemyScore
+00002438                          1660      
+00002438                          1661      ;Draw Player LED
+00002438  2039 003866C2           1662      move.l  (PlayerScorePos),d0  
+0000243E  4EB8 067E               1663      jsr     ag_DrawScoreBG
+00002442                          1664      
+00002442  2200                    1665      move.l  d0,d1
+00002444  2039 003866C6           1666      move.l  (PlayerScore),d0
+0000244A  2439 003866BA           1667      move.l  (LEDSize),d2
+00002450                          1668      
+00002450                          1669      ;Draw 10s digit
+00002450  80FC 000A               1670      divu.w  #10,d0   
+00002454  4EB8 0010               1671      jsr     ag_DrawScoreLED
+00002458                          1672      
+00002458                          1673      ;Draw 1s digit    
+00002458  4840                    1674      swap    d0
+0000245A                          1675      
+0000245A                          1676      ;Add offset to X
+0000245A  2639 003866BA           1677      move.l  (LEDSize),d3
+00002460  2839 003866BE           1678      move.l  (LEDPadding),d4
+00002466                          1679      
+00002466                          1680      ;Get X values to lower Word
+00002466  4841                    1681      swap    d1
+00002468  4843                    1682      swap    d3
+0000246A  4844                    1683      swap    d4
+0000246C                          1684      
+0000246C                          1685      ;Add
+0000246C  D243                    1686      add.w   d3,d1
+0000246E  D244                    1687      add.w   d4,d1
+00002470                          1688      
+00002470                          1689      ;Swap back to X,Y format
+00002470  4841                    1690      swap    d1
+00002472  4EB8 0010               1691      jsr     ag_DrawScoreLED
+00002476                          1692      
+00002476  23F9 003866C6 003866CA  1693      move.l  (PlayerScore),(Last_PlayerScore)
+00002480                          1694      
+00002480                          1695      ;Check If Game Over
+00002480  0CB9 0000000D 003866C6  1696      cmpi.l  #POINTS_TO_WIN,(PlayerScore)
+0000248A  6C00 0094               1697      BGE     .main_PlayerWin
+0000248E                          1698      
+0000248E  43F9 003866EC           1699      lea     PLAYER_SCORESOUND,a1
+00002494  7200                    1700      move.l  #0,d1
+00002496  7400                    1701      move.l  #0,d2
+00002498  7049                    1702      move.l  #PLAY_SOUND,d0
+0000249A  4E4F                    1703      TRAP    #15  
+0000249C                          1704  
+0000249C                          1705  
+0000249C                          1706  .b_CheckEnemyScore
+0000249C  2039 003866D2           1707      move.l  (EnemyScore),d0
+000024A2  2239 003866D6           1708      move.l  (Last_EnemyScore),d1
+000024A8  B081                    1709      cmp.l   d1,d0
+000024AA  6F00 0066               1710      BLE     .main_LoopAgain
+000024AE                          1711  
+000024AE                          1712      ;Draw Enemy Score 
+000024AE  2039 003866CE           1713      move.l  (EnemyScorePos),d0  
+000024B4  4EB8 067E               1714      jsr     ag_DrawScoreBG
+000024B8                          1715      
+000024B8  2200                    1716      move.l  d0,d1  
+000024BA  2039 003866D2           1717      move.l  (EnemyScore),d0
+000024C0  2439 003866BA           1718      move.l  (LEDSize),d2
+000024C6                          1719      
+000024C6                          1720      ;Draw 10s digit
+000024C6  80FC 000A               1721      divu.w  #10,d0   
+000024CA  4EB8 0010               1722      jsr     ag_DrawScoreLED
+000024CE                          1723      
+000024CE                          1724      ;Draw 1s digit    
+000024CE  4840                    1725      swap    d0
+000024D0                          1726      
+000024D0                          1727      ;Add offset to X
+000024D0  2639 003866BA           1728      move.l  (LEDSize),d3
+000024D6  2839 003866BE           1729      move.l  (LEDPadding),d4
+000024DC                          1730      
+000024DC                          1731      ;Get X values to lower Word
+000024DC  4841                    1732      swap    d1
+000024DE  4843                    1733      swap    d3
+000024E0  4844                    1734      swap    d4
+000024E2                          1735      
+000024E2                          1736      ;Add
+000024E2  D243                    1737      add.w   d3,d1
+000024E4  D244                    1738      add.w   d4,d1
+000024E6                          1739      
+000024E6                          1740      ;Swap back to X,Y format
+000024E6  4841                    1741      swap    d1
+000024E8  4EB8 0010               1742      jsr     ag_DrawScoreLED
+000024EC                          1743      
+000024EC  23F9 003866D2 003866D6  1744      move.l  (EnemyScore),(Last_EnemyScore)
+000024F6                          1745      
+000024F6  0CB9 0000000D 003866D2  1746      cmpi.l  #POINTS_TO_WIN,(EnemyScore)
+00002500  6C00 0052               1747      BGE     .main_PlayerLose 
+00002504                          1748      
+00002504  43F9 00386702           1749      lea     ENEMY_SCORESOUND,a1
+0000250A  7200                    1750      move.l  #0,d1
+0000250C  7400                    1751      move.l  #0,d2
+0000250E  7049                    1752      move.l  #PLAY_SOUND,d0
+00002510  4E4F                    1753      TRAP    #15  
+00002512                          1754  
+00002512                          1755  .main_LoopAgain    
+00002512                          1756      
+00002512                          1757  *    move.l  #DELAY_FRAME,d0
+00002512                          1758  *    move.l  #DELAY_FRAME_VAL,d1
+00002512                          1759  *    TRAP    #15
+00002512                          1760      
+00002512  705E                    1761      move.l  #BUFFER_PAINT,d0
+00002514  4281                    1762      clr.l   d1
+00002516  123C 0011               1763      move.b  #17,d1
+0000251A  4E4F                    1764      TRAP    #15 
+0000251C                          1765      
+0000251C                          1766      
+0000251C                          1767      
+0000251C  6000 FC44               1768      bra gameloop
+00002520                          1769  
+00002520                          1770  
+00002520                          1771  .main_PlayerWin
+00002520                          1772  
+00002520                          1773  
+00002520  41F9 0025A642           1774      lea     BitmapBG_Win,a0
+00002526  243C 00A00126           1775      move.l  #$00A00126,d2
+0000252C  263C 01400040           1776      move.l  #$01400040,d3
+00002532  2802                    1777      move.l  d2,d4
+00002534                          1778      
+00002534  4EB8 037E               1779      jsr     DrawBMP
+00002538                          1780      
+00002538  705E                    1781      move.l  #BUFFER_PAINT,d0
+0000253A  4281                    1782      clr.l   d1
+0000253C  123C 0011               1783      move.b  #17,d1
+00002540  4E4F                    1784      TRAP #15 
+00002542                          1785  
+00002542  43F9 00386726           1786      lea     PLAYERWIN_SOUND,a1
+00002548  7200                    1787      move.l  #0,d1
+0000254A  7400                    1788      move.l  #0,d2
+0000254C  7049                    1789      move.l  #PLAY_SOUND,d0
+0000254E  4E4F                    1790      TRAP    #15
+00002550                          1791      
+00002550  6000 0036               1792      BRA     main_Endloop
+00002554                          1793  
+00002554                          1794  
+00002554                          1795  .main_PlayerLose
+00002554                          1796  
+00002554  41F9 0012E60A           1797      lea     BitmapBG_Lose,a0
+0000255A  243C 00910126           1798      move.l  #$00910126,d2
+00002560  263C 015E0040           1799      move.l  #$015E0040,d3
+00002566  2802                    1800      move.l  d2,d4
+00002568                          1801      
+00002568  4EB8 037E               1802      jsr     DrawBMP
+0000256C                          1803  
+0000256C  705E                    1804      move.l  #BUFFER_PAINT,d0
+0000256E  4281                    1805      clr.l   d1
+00002570  123C 0011               1806      move.b  #17,d1
+00002574  4E4F                    1807      TRAP #15 
+00002576                          1808      
+00002576  43F9 00386734           1809      lea     ENEMYWIN_SOUND,a1
+0000257C  7200                    1810      move.l  #0,d1
+0000257E  7400                    1811      move.l  #0,d2
+00002580  7049                    1812      move.l  #PLAY_SOUND,d0
+00002582  4E4F                    1813      TRAP    #15
+00002584                          1814      
+00002584  6000 0002               1815      BRA     main_Endloop
+00002588                          1816  
+00002588                          1817  main_EndLoop
+00002588                          1818  
+00002588  7007                    1819      move.l  #CHECK_INPUT,d0
+0000258A  4E4F                    1820      TRAP #15
+0000258C                          1821      
+0000258C  7005                    1822      move.l  #READ_CHAR,d0
+0000258E  4E4F                    1823      TRAP    #15
+00002590                          1824  
+00002590  B239 003866DA           1825      cmp.b   (Restart_Key),d1
+00002596  6700 0004               1826      BEQ     main_ResetGame
+0000259A                          1827  
+0000259A  60EC                    1828      BRA     main_Endloop
+0000259C                          1829      
+0000259C                          1830      
+0000259C                          1831  
+0000259C                          1832  main_ResetGame
+0000259C  23FC 00000000 003866C6  1833      move.l  #0,(PlayerScore)
+000025A6  23FC 00000000 003866D2  1834      move.l  #0,(EnemyScore)
+000025B0                          1835      
+000025B0  705C                    1836      move.l  #DOUBLE_BUFFER,d0
+000025B2  4281                    1837      clr.l   d1
+000025B4  123C 0010               1838      move.b  #16,d1
+000025B8  4E4F                    1839      TRAP #15
+000025BA                          1840      
+000025BA  4280                    1841      clr.l   d0
+000025BC  4281                    1842      clr.l   d1
+000025BE  4282                    1843      clr.l   d2
+000025C0  4283                    1844      clr.l   d3
+000025C2  4284                    1845      clr.l   d4
+000025C4  4285                    1846      clr.l   d5
+000025C6  4286                    1847      clr.l   d6
+000025C8  4287                    1848      clr.l   d7
+000025CA                          1849      
+000025CA                          1850  
+000025CA  6000 FA34               1851      BRA     main_Start
+000025CE  FFFF FFFF               1852      SIMHALT             ; halt simulator
+000025D2                          1853      
+000025D2                          1854      
+000025D2                          1855      
+000025D2                          1856  BitmapBG        INCBIN  "BitmapBG_base.bmp"
+0012E60A                          1857  BitmapBG_Lose   INCBIN  "BitmapBG_lose.bmp"
+0025A642                          1858  BitmapBG_Win    INCBIN  "BitmapBG_win.bmp"
+0038667A                          1859  
+0038667A= 00026200                1860  Player_PositionX    dc.l    $00026200
+0038667E= 0000F000                1861  Player_PositionY    dc.l    $0000F000
+00386682= 00000001                1862  Last_Player_PosX    dc.l    1
+00386686= 00000001                1863  Last_Player_PosY    dc.l    1
+0038668A= 00001800                1864  Player_Velocity     dc.l    $00001800
+0038668E                          1865  
+0038668E= 00000F00                1866  Enemy_PositionX     dc.l    $00000F00
+00386692= 0000F000                1867  Enemy_PositionY     dc.l    $0000F000
+00386696= 00000001                1868  Last_Enemy_PosX     dc.l    1
+0038669A= 00000001                1869  Last_Enemy_PosY     dc.l    1 
+0038669E= 000001E0                1870  Enemy_Velocity      dc.l    $000001E0
+003866A2                          1871  
+003866A2= 000E0064                1872  Paddle_Size         dc.l    $000E0064
+003866A6                          1873      
+003866A6= 000000F4                1874  Ball_PositionX      dc.l    $000000F4
+003866AA= 000000F4                1875  Ball_PositionY      dc.l    $000000F4
+003866AE= 00000001                1876  Last_Ball_PosX      dc.l    1
+003866B2= 00000001                1877  Last_Ball_PosY      dc.l    1
+003866B6= 02000200                1878  Ball_Velocity       dc.l    $02000200 ;$02000200
+003866BA                          1879  
+003866BA= 00140028                1880  LEDSize             dc.l    $00140028
+003866BE= 000A000A                1881  LEDPadding          dc.l    $000A000A
+003866C2                          1882  
+003866C2= 0258000A                1883  PlayerScorePos      dc.l    $0258000A
+003866C6= 00000000                1884  PlayerScore         dc.l    $00000000
+003866CA= 00000000                1885  Last_PlayerScore    dc.l    $00000000
+003866CE                          1886  
+003866CE= 0014000A                1887  EnemyScorePos       dc.l    $0014000A
+003866D2= 00000000                1888  EnemyScore          dc.l    $00000000
+003866D6= 00000000                1889  Last_EnemyScore     dc.l    $00000000
+003866DA                          1890  
+003866DA= 72                      1891  Restart_Key         dc.b    'r'
+003866DB= 01 02 03                1892  KEYPADDING          dc.b    1,2,3
+003866DE                          1893  
+003866DE= 47 61 6D 65 53 74 ...   1894  GAME_START_SOUND    dc.b    'GameStart.wav',0
+003866EC= 50 6C 61 79 65 72 ...   1895  PLAYER_SCORESOUND   dc.b    'PlayerScore_Sound.wav',0
+00386702= 45 6E 65 6D 79 53 ...   1896  ENEMY_SCORESOUND    dc.b    'EnemyScore_Sound.wav',0
+00386717= 50 61 64 64 6C 65 ...   1897  HIT_SOUND           dc.b    'PaddleHit2.wav',0
+00386726= 50 6C 61 79 65 72 ...   1898  PLAYERWIN_SOUND     dc.b    'PlayerWin.wav',0
+00386734= 45 6E 65 6D 79 57 ...   1899  ENEMYWIN_SOUND      dc.b    'EnemyWin.wav',0
+00386741                          1900  
+00386741                          1901  
+00386741                          1902      END    START        ; last line of source
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+AG_ABSVAL           6C4
+AG_ABSVAL:AV_EXIT   6DC
+AG_ABSVAL:AV_NEGATIVE  6D6
+AG_DRAWBALL         33E
+AG_DRAWPADDLE       640
+AG_DRAWSCOREBG      67E
+AG_DRAWSCORELED     10
+AG_DRAWSCORELED:END  152
+AG_DRAWSCORELED:SEGMENTA  4C
+AG_DRAWSCORELED:SEGMENTB  68
+AG_DRAWSCORELED:SEGMENTC  8C
+AG_DRAWSCORELED:SEGMENTD  B6
+AG_DRAWSCORELED:SEGMENTE  DC
+AG_DRAWSCORELED:SEGMENTF  102
+AG_DRAWSCORELED:SEGMENTG  122
+AG_UPDATEBALL       162
+AG_UPDATEBALL:AG_CHECK_ENEMY  1F2
+AG_UPDATEBALL:AG_CHECK_PLAYER  18A
+AG_UPDATEBALL:AG_EDGECHECK  284
+AG_UPDATEBALL:AG_ENEMYSCORED  272
+AG_UPDATEBALL:AG_PADDLEMISS  2C6
+AG_UPDATEBALL:AG_PLAYERSCORED  260
+AG_UPDATEBALL:AG_RANDOMSPAWN  302
+AG_UPDATEBALL:AG_SAVEPOS  2B8
+AG_UPDATEBALL:AG_X_MAX  2CE
+AG_UPDATEBALL:AG_X_MIN  2EA
+AG_UPDATEBALL:AG_Y_MAX  284
+AG_UPDATEBALL:AG_Y_MIN  2A2
+AG_UPDATEENEMY      5D2
+AG_UPDATEENEMY:AG_E_AT_MAX_Y  61C
+AG_UPDATEENEMY:AG_E_AT_MIN_Y  608
+AG_UPDATEENEMY:AG_E_CHECKMAX  5EE
+AG_UPDATEENEMY:AG_E_CHECKMIN  5E4
+AG_UPDATEENEMY:AG_E_EXIT  63A
+AG_UPDATEPLAYER     54A
+AG_UPDATEPLAYER:AG_AT_MAX_Y  5B8
+AG_UPDATEPLAYER:AG_AT_MIN_Y  586
+AG_UPDATEPLAYER:AG_CHECKDOWN  58C
+AG_UPDATEPLAYER:AG_P_EXIT  5CC
+ALL_REG             7FFF
+BALL_DIAMETER       14
+BALL_EDGE_COLOR     FFFFFF
+BALL_FILL_COLOR     F3C7DF
+BALL_POSITIONX      3866A6
+BALL_POSITIONY      3866AA
+BALL_POSITION_X     0
+BALL_POSITION_Y     4
+BALL_REG            3FF
+BALL_VELOCITY       3866B6
+BALL_VELOCITY_X     8
+BALL_VELOCITY_Y     A
+BASICDRAW           496
+BITMAPBG            25D2
+BITMAPBG_LOSE       12E60A
+BITMAPBG_WIN        25A642
+BITMAP_BPP_OFFSET   1C
+BITMAP_BUFFER       10001
+BITMAP_HEIGHT_OFFSET  16
+BITMAP_IMAGE_DATA_OFFSET  A
+BITMAP_WIDTH_OFFSET  12
+BUFFER_PAINT        5E
+CHECKCHUNKXOFFSET   3F2
+CHECKCHUNKYOFFSET   406
+CHECKFORZEROCHUNKX  3D2
+CHECKFORZEROCHUNKY  3E2
+CHECKHEIGHT         430
+CHECKIFEND          4C2
+CHECKWIDTH          41A
+CHECK_INPUT         7
+CHUNK_HEIGHT        A
+CHUNK_WIDTH         8
+CHUNK_X_OFFSET      4
+CHUNK_Y_OFFSET      6
+COLOR_RED           FF
+COLOR_WHITE         FFFFFF
+CONVERTTOBGR        518
+CONVERTTOBIGENDIAN  510
+DELAY_FRAME         17
+DELAY_FRAME_VAL     1
+DOUBLE_BUFFER       5C
+DRAWBMP             37E
+DRAW_BALL_REG       3
+DRAW_FILLED_ELLIPSE  58
+DRAW_FRECT          57
+DRAW_PIXEL          52
+END                 4D2
+ENDNOT32BIT         4E4
+ENDNOTBMP           4D8
+ENEMYSCORE          3866D2
+ENEMYSCOREPOS       3866CE
+ENEMYWIN_SOUND      386734
+ENEMY_EDGE_COLOR    FFFFFF
+ENEMY_FILL_COLOR    A0607B
+ENEMY_POSITIONX     38668E
+ENEMY_POSITIONY     386692
+ENEMY_POS_X         14
+ENEMY_POS_Y         18
+ENEMY_SCORE         24
+ENEMY_SCORESOUND    386702
+ENEMY_VELOCITY      38669E
+FULL_IMAGE_HEIGHT   2
+FULL_IMAGE_WIDTH    0
+GAMELOOP            2162
+GAMELOOP:B_CHECKENEMYSCORE  249C
+GAMELOOP:B_DRAWBALL  2402
+GAMELOOP:DRAW_BM_ENEMY  235C
+GAMELOOP:DRAW_BM_PLAYER  22D0
+GAMELOOP:E_NEGDISP  2326
+GAMELOOP:MAIN_BM_BALL  221E
+GAMELOOP:MAIN_BM_ENEMY  22DA
+GAMELOOP:MAIN_BM_PLAYER  224E
+GAMELOOP:MAIN_DRAWBALL  23D6
+GAMELOOP:MAIN_DRAWENEMY  239C
+GAMELOOP:MAIN_DRAWENTITIES  2366
+GAMELOOP:MAIN_DRAWLED  2426
+GAMELOOP:MAIN_DRAWPLAYER  2366
+GAMELOOP:MAIN_LOOPAGAIN  2512
+GAMELOOP:MAIN_PLAYERLOSE  2554
+GAMELOOP:MAIN_PLAYERWIN  2520
+GAMELOOP:P_NEGDISP  229A
+GAME_START_SOUND    3866DE
+HIT_SOUND           386717
+IGNOREPADDLE        37C
+KEYBOARD_ECHO       C
+KEYPADDING          3866DB
+LAST_BALL_POSX      3866AE
+LAST_BALL_POSY      3866B2
+LAST_ENEMYSCORE     3866D6
+LAST_ENEMY_POSX     386696
+LAST_ENEMY_POSY     38669A
+LAST_PLAYERSCORE    3866CA
+LAST_PLAYER_POSX    386682
+LAST_PLAYER_POSY    386686
+LEDPADDING          3866BE
+LEDSIZE             3866BA
+MAIN_ENDLOOP        2588
+MAIN_RESETGAME      259C
+MAIN_START          2000
+NEXTROW             4F0
+NOT32BIT            52E
+NOTBMP              51C
+OUTPUT_MAX_HEIGHT   1A4
+OUTPUT_MAX_WIDTH    280
+OUTPUT_SCREEN_HEIGHT  1E0
+OUTPUT_X_POS        C
+OUTPUT_Y_POS        E
+PADBYTES            37D
+PADDLE_OUTLINE      0
+PADDLE_SIZE         3866A2
+PADDLE_SIZE_X       1C
+PADDLE_SIZE_Y       1E
+PLAYERSCORE         3866C6
+PLAYERSCOREPOS      3866C2
+PLAYERWIN_SOUND     386726
+PLAYER_FILL_COLOR   FFFFFF
+PLAYER_POSITIONX    38667A
+PLAYER_POSITIONY    38667E
+PLAYER_POS_X        C
+PLAYER_POS_Y        10
+PLAYER_SCORE        20
+PLAYER_SCORESOUND   3866EC
+PLAYER_VELOCITY     38668A
+PLAY_SOUND          49
+POINTS_TO_WIN       D
+P_DRAW_FILL         C
+P_DRAW_HEIGHT       A
+P_DRAW_OUTLINE      10
+P_DRAW_POS_X        0
+P_DRAW_POS_Y        4
+P_DRAW_WIDTH        8
+P_UPDATE_HEIGHT     6
+P_UPDATE_POS_Y      0
+P_UPDATE_VELOCITY   8
+P_UPDATE_WIDTH      4
+READ_CHAR           5
+RESTART_KEY         3866DA
+SCOREBOARD_EDGE_COLOR  FFFFFF
+SCOREBOARD_FILL_COLOR  825363
+SCOREMASK           158
+SCORE_COLOR         F3C7DF
+SCORE_EDGE_COLOR    F3C7DF
+SCORE_HEIGHT        A
+SCORE_POS_X         4
+SCORE_POS_Y         6
+SCORE_REG           7
+SCORE_THICKNESS     5
+SCORE_WIDTH         8
+SETOUTPUTSCREEN     446
+SET_FILL_COLOR      51
+SET_PEN_COLOR       50
+START               2000
+S_KEY               73
+TIME                8
+W_KEY               77

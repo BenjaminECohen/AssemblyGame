@@ -1,0 +1,428 @@
+00000000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/15/2023 5:08:25 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      : ag_DrawBall
+00000000                             3  * Written by :
+00000000                             4  * Date       :
+00000000                             5  * Description:
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  
+00000000  =00FFFFFF                  9  COLOR_WHITE             EQU             $00FFFFFF
+00000000  =000000FF                 10  COLOR_RED               EQU             $000000FF
+00000000                            11  
+00000000                            12  ;BALL_STACK_SIZE         EQU             8   ;in bytes
+00000000                            13  
+00000000  =00000000                 14  BALL_POSITION_X         EQU             0
+00000000  =00000004                 15  BALL_POSITION_Y         EQU             4
+00000000  =00000008                 16  BALL_VELOCITY_X         EQU             8
+00000000  =0000000A                 17  BALL_VELOCITY_Y         EQU             10
+00000000  =0000000C                 18  PLAYER_POS_X            EQU             12
+00000000  =00000010                 19  PLAYER_POS_Y            EQU             16
+00000000  =00000014                 20  ENEMY_POS_X             EQU             20
+00000000  =00000018                 21  ENEMY_POS_Y             EQU             24
+00000000  =0000001C                 22  PADDLE_SIZE_X           EQU             28
+00000000  =0000001E                 23  PADDLE_SIZE_Y           EQU             30
+00000000  =00000020                 24  PLAYER_SCORE            EQU             32
+00000000  =00000024                 25  ENEMY_SCORE             EQU             36
+00000000                            26  
+00000000  =00000050                 27  SET_PEN_COLOR           EQU             80
+00000000  =00000051                 28  SET_FILL_COLOR          EQU             81
+00000000  =00000052                 29  DRAW_PIXEL              EQU             82
+00000000  =00000058                 30  DRAW_FILLED_ELLIPSE     EQU             88
+00000000                            31  
+00000000                            32  BALL_REG                REG             D0-D7/A0-A6
+00000000                            33  
+00000000                            34  
+00000000                            35  ag_UpdateBall
+00000000                            36      
+00000000  48E7 FFFE                 37      movem.l BALL_REG,-(sp)   
+00000004                            38      
+00000004  4280                      39      clr.l   d0
+00000006  4281                      40      clr.l   d1
+00000008  4282                      41      clr.l   d2
+0000000A  4283                      42      clr.l   d3
+0000000C  4284                      43      clr.l   d4
+0000000E  4285                      44      clr.l   d5
+00000010                            45  
+00000010                            46      
+00000010  2C2F 0000                 47      move.l  BALL_POSITION_X(sp),d6           ;x Pos val
+00000014  2E2F 0004                 48      move.l  BALL_POSITION_Y(sp),d7           ;y Pos val
+00000018                            49      
+00000018                            50      ;ADDING BALL VELOCITY
+00000018  322F 0008                 51      move.w  BALL_VELOCITY_X(sp),d1
+0000001C  342F 000A                 52      move.w  BALL_VELOCITY_Y(sp),d2
+00000020                            53      
+00000020  48C1                      54      ext.l   d1
+00000022  48C2                      55      ext.l   d2
+00000024                            56      
+00000024  DC81                      57      add.l   d1,d6       ;add x velocity
+00000026  DE82                      58      add.l   d2,d7       ;add y velocity
+00000028                            59    
+00000028                            60  
+00000028                            61  .ag_Check_Player
+00000028                            62      
+00000028  0C39 0000 0000024E        63      cmp.b   #0,(IgnorePaddle)
+00000030  6600 01AE                 64      BNE     .ag_PaddleMiss
+00000034                            65      
+00000034                            66      ;Check if greater than right x of paddle
+00000034  4285                      67      clr.l   d5
+00000036                            68      ;move.l  BALL_POSITION_X(sp),d6
+Line 69 ERROR: Invalid syntax
+00000036                            69      addi.l  #(BALL_DIAMETER)<<8,d5
+00000036  DA86                      70      add.l   d6,d5
+00000038                            71      
+00000038  202F 000C                 72      move.l  PLAYER_POS_X(sp),d0
+0000003C                            73  
+0000003C  BA80                      74      cmp.l   d0,d5
+0000003E  6D00 0046                 75      BLT     .ag_Check_Enemy
+00000042                            76      
+00000042                            77      ;Check if greater than Upper Y
+00000042  202F 0010                 78      move.l  PLAYER_POS_Y(sp),d0
+Line 79 ERROR: Invalid syntax
+00000046                            79      move.l  #(BALL_DIAMETER)<<8,d5      ;Get the lower y val of ball
+00000046  DA87                      80      add.l   d7,d5                       ;Add player Y pos
+00000048                            81      
+00000048  BE80                      82      cmp.l   d0,d7
+0000004A  6D00 0194                 83      BLT     .ag_PaddleMiss
+0000004E                            84      
+0000004E                            85      ;Check if less than lower Y
+0000004E  4281                      86      clr.l   d1 
+00000050  322F 001E                 87      move.w  PADDLE_SIZE_Y(sp),d1    ;Get paddle size
+Line 88 ERROR: Undefined symbol
+00000054  0441 BD16                 88      sub.w   #BALL_DIAMETER,d1       ;Get diff in paddle vs diameter of ball
+00000058  E181                      89      asl.l   #8,d1                   ;Shift 8 to left for fixed point
+0000005A  D081                      90      add.l   d1,d0                   ;add value to d0, player pos y
+0000005C  BE80                      91      cmp.l   d0,d7                   ;compare y
+0000005E  6E00 0180                 92      BGT     .ag_PaddleMiss
+00000062                            93      
+00000062                            94      ;If pass all, we are inside the player, change velocity!  
+00000062  4280                      95      clr.l   d0
+00000064  906F 0008                 96      sub.w   BALL_VELOCITY_X(sp),d0
+00000068  3F40 0008                 97      move.w  d0,BALL_VELOCITY_X(sp)
+0000006C                            98      
+0000006C  202F 000C                 99      move.l  PLAYER_POS_X(sp),d0
+Line 100 ERROR: Invalid syntax
+00000070                           100      sub.w   #(BALL_DIAMETER)<<8,d0
+00000070  2C00                     101      move.l  d0,d6                       ;Set x pos to leftmost
+00000072  6000 015E                102      BRA     .ag_SavePos
+00000076                           103      
+Line 104 ERROR: Symbol value differs between first and second pass
+00000076                           104  .ag_Check_Enemy  
+00000076                           105      
+00000076  0C39 0000 0000024E       106      cmp.b   #0,(IgnorePaddle)
+0000007E  6600 0160                107      BNE     .ag_PaddleMiss
+00000082                           108      
+00000082                           109      ;Check if less than right x of paddle
+00000082  4281                     110      clr.l   d1
+00000084  202F 0014                111      move.l  ENEMY_POS_X(sp),d0
+00000088  322F 001C                112      move.w  PADDLE_SIZE_X(sp),d1
+0000008C  E181                     113      asl.l   #8,d1
+0000008E  D081                     114      add.l   d1,d0
+00000090  BC80                     115      cmp.l   d0,d6
+00000092  6E00 010A                116      BGT     .ag_EdgeCheck 
+00000096                           117  
+00000096                           118      ;Check if greater than Lower Y
+00000096  202F 0018                119      move.l  ENEMY_POS_Y(sp),d0
+0000009A                           120     
+0000009A  BE80                     121      cmp.l   d0,d7
+0000009C  6D00 0142                122      BLT     .ag_PaddleMiss 
+000000A0                           123     
+000000A0                           124      ;Check if less than upper Y
+000000A0  4281                     125      clr.l   d1 
+000000A2  322F 001E                126      move.w  PADDLE_SIZE_Y(sp),d1   ;Get paddle size
+Line 127 ERROR: Undefined symbol
+000000A6  0441 BD16                127      sub.w   #BALL_DIAMETER,d1       ;Get diff in paddle vs diameter of ball
+000000AA  E181                     128      asl.l   #8,d1                   ;Shift 8 to left for fixed point
+000000AC  D081                     129      add.l   d1,d0                   ;add value to d0, enemy pos y
+000000AE  BE80                     130      cmp.l   d0,d7                   ;compare y
+000000B0  6E00 012E                131      BGT     .ag_PaddleMiss
+000000B4                           132     
+000000B4                           133      ;If pass all, change velocity!        
+000000B4  4280                     134      clr.l   d0
+000000B6  906F 0008                135      sub.w   BALL_VELOCITY_X(sp),d0
+000000BA  3F40 0008                136      move.w  d0,BALL_VELOCITY_X(sp)
+000000BE                           137      
+000000BE  202F 0014                138      move.l  ENEMY_POS_X(sp),d0
+000000C2  4281                     139      clr.l   d1
+000000C4  322F 001C                140      move.w  PADDLE_SIZE_X(sp),d1
+000000C8  E181                     141      asl.l   #8,d1
+000000CA  D081                     142      add.l   d1,d0 
+000000CC  2C00                     143      move.l  d0,d6
+000000CE  6000 0102                144      BRA     .ag_SavePos
+000000D2                           145      
+000000D2                           146      
+Line 147 ERROR: Symbol value differs between first and second pass
+000000D2                           147  .ag_PlayerScored
+000000D2  13FC 0000 0000024E       148      move.b  #0,(IgnorePaddle)
+000000DA  206F 0020                149      move.l  PLAYER_SCORE(sp),a0
+000000DE  5290                     150      addi.l  #1,(a0)
+000000E0                           151  
+000000E0                           152      ;---
+000000E0                           153      ;Random Constrained reset
+000000E0                           154      ;---
+Line 155 ERROR: Undefined symbol
+000000E0  203C 004DBD16            155      move.l  #TIME,d0            ;d1 holds time
+000000E6  4E4F                     156      TRAP    #15
+000000E8                           157      
+000000E8                           158      ;X
+000000E8  2001                     159      move.l  d1,d0
+000000EA  D281                     160      add.l   d1,d1
+000000EC                           161      
+000000EC  B300                     162      eor.b   d1,d0
+000000EE  D000                     163      add.b   d0,d0
+000000F0                           164      
+000000F0  4281                     165      clr.l   d1
+000000F2  1200                     166      move.b  d0,d1
+000000F4                           167      
+Line 168 ERROR: Invalid syntax
+000000F4                           168      divu.w  #(OUTPUT_MAX_WIDTH/3),d1
+000000F4  323C 0000                169      move.w  #0,d1
+000000F8  4841                     170      swap    d1
+Line 171 ERROR: Invalid syntax
+000000FA                           171      add.w   #(OUTPUT_MAX_WIDTH/3),d1
+000000FA  E181                     172      asl.l   #8,d1
+000000FC  2C01                     173      move.l  d1,d6
+000000FE                           174      
+000000FE                           175      ;Y
+Line 176 ERROR: Undefined symbol
+000000FE  203C 004DBD16            176      move.l  #TIME,d0            ;d1 holds time
+00000104  4E4F                     177      TRAP    #15
+00000106                           178      
+00000106  2001                     179      move.l  d1,d0
+00000108  D281                     180      add.l   d1,d1
+0000010A                           181      
+0000010A  B300                     182      eor.b   d1,d0
+0000010C  D000                     183      add.b   d0,d0
+0000010E                           184      
+0000010E  4281                     185      clr.l   d1
+00000110  1200                     186      move.b  d0,d1
+00000112                           187      
+Line 188 ERROR: Invalid syntax
+00000112                           188      divu.w  #(OUTPUT_MAX_HEIGHT/2),d1
+00000112  323C 0000                189      move.w  #0,d1
+00000116  4841                     190      swap    d1
+Line 191 ERROR: Invalid syntax
+00000118                           191      add.w   #(OUTPUT_MAX_HEIGHT/4),d1
+00000118  E181                     192      asl.l   #8,d1
+0000011A  2E01                     193      move.l  d1,d7
+0000011C  6000 00B4                194      BRA .ag_SavePos
+00000120                           195      
+Line 196 ERROR: Symbol value differs between first and second pass
+00000120                           196  .ag_EnemyScored
+00000120  13FC 0000 0000024E       197      move.b  #0,(IgnorePaddle)
+00000128  206F 0024                198      move.l  ENEMY_SCORE(sp),a0
+0000012C  5290                     199      addi.l  #1,(a0)
+0000012E                           200  
+0000012E                           201      ;--
+0000012E                           202      ;Reset ball
+0000012E                           203      ;--
+0000012E                           204      ;---
+0000012E                           205      ;Random Constrained reset
+0000012E                           206      ;---
+Line 207 ERROR: Undefined symbol
+0000012E  203C 004DBD16            207      move.l  #TIME,d0            ;d1 holds time
+00000134  4E4F                     208      TRAP    #15
+00000136                           209      
+00000136                           210      ;X
+00000136  2001                     211      move.l  d1,d0
+00000138  D281                     212      add.l   d1,d1
+0000013A                           213      
+0000013A  B300                     214      eor.b   d1,d0
+0000013C  D000                     215      add.b   d0,d0
+0000013E                           216      
+0000013E  4281                     217      clr.l   d1
+00000140  1200                     218      move.b  d0,d1
+00000142                           219      
+Line 220 ERROR: Invalid syntax
+00000142                           220      divu.w  #(OUTPUT_MAX_WIDTH/3),d1
+00000142  323C 0000                221      move.w  #0,d1
+00000146  4841                     222      swap    d1
+Line 223 ERROR: Invalid syntax
+00000148                           223      add.w   #(OUTPUT_MAX_WIDTH/3),d1
+00000148  E181                     224      asl.l   #8,d1
+0000014A  2C01                     225      move.l  d1,d6
+0000014C                           226      
+0000014C                           227      ;Y
+Line 228 ERROR: Undefined symbol
+0000014C  203C 004DBD16            228      move.l  #TIME,d0            ;d1 holds time
+00000152  4E4F                     229      TRAP    #15
+00000154                           230      
+00000154  2001                     231      move.l  d1,d0
+00000156  D281                     232      add.l   d1,d1
+00000158                           233      
+00000158  B300                     234      eor.b   d1,d0
+0000015A  D000                     235      add.b   d0,d0
+0000015C                           236      
+0000015C  4281                     237      clr.l   d1
+0000015E  1200                     238      move.b  d0,d1
+00000160                           239      
+Line 240 ERROR: Invalid syntax
+00000160                           240      divu.w  #(OUTPUT_MAX_HEIGHT/2),d1
+00000160  323C 0000                241      move.w  #0,d1
+00000164  4841                     242      swap    d1
+Line 243 ERROR: Invalid syntax
+00000166                           243      add.w   #(OUTPUT_MAX_HEIGHT/4),d1
+00000166  E181                     244      asl.l   #8,d1
+00000168  2E01                     245      move.l  d1,d7
+0000016A  6000 0066                246      BRA     .ag_SavePos
+0000016E                           247  
+Line 248 ERROR: Symbol value differs between first and second pass
+0000016E                           248  .ag_EdgeCheck      
+Line 249 ERROR: Symbol value differs between first and second pass
+0000016E                           249  .ag_Y_MAX
+Line 250 ERROR: Invalid syntax
+0000016E                           250      cmpi.l   #(OUTPUT_MAX_HEIGHT-BALL_DIAMETER)<<8,d7
+0000016E  6D00 004C                251      BLT     .ag_Y_MIN
+00000172  4280                     252      clr.l   d0
+00000174  906F 000A                253      sub.w   BALL_VELOCITY_Y(sp),d0
+00000178  3F40 000A                254      move.w  d0,BALL_VELOCITY_Y(sp)
+Line 255 ERROR: Invalid syntax
+0000017C                           255      move.l  #(OUTPUT_MAX_HEIGHT-BALL_DIAMETER)<<8,d7
+0000017C  6000 0054                256      BRA     .ag_SavePos
+00000180                           257      
+Line 258 ERROR: Symbol value differs between first and second pass
+00000180                           258  .ag_Y_MIN
+00000180  BEBC 00000000            259      cmp.l   #0,d7
+00000186  6E00 004A                260      BGT     .ag_SavePos
+0000018A  4280                     261      clr.l   d0
+0000018C  906F 000A                262      sub.w   BALL_VELOCITY_Y(sp),d0
+00000190  3F40 000A                263      move.w  d0,BALL_VELOCITY_Y(sp)
+00000194  7E00                     264      move.l  #0,d7
+00000196                           265      
+Line 266 ERROR: Symbol value differs between first and second pass
+00000196                           266  .ag_SavePos
+00000196                           267      ;Save Position
+00000196  2F46 0000                268      move.l  d6,BALL_POSITION_X(sp)
+0000019A  2F47 0004                269      move.l  d7,BALL_POSITION_Y(sp)
+0000019E  4CDF 7FFF                270      movem.l (sp)+,BALL_REG
+000001A2  4E75                     271      rts
+000001A4                           272      
+Line 273 ERROR: Symbol value differs between first and second pass
+000001A4                           273  .ag_PaddleMiss 
+000001A4  13FC 0001 0000024E       274      move.b  #1,(IgnorePaddle)
+000001AC                           275     
+Line 276 ERROR: Symbol value differs between first and second pass
+000001AC                           276  .ag_X_MAX
+Line 277 ERROR: Invalid syntax
+000001AC                           277      cmpi.l   #(OUTPUT_MAX_WIDTH-BALL_DIAMETER)<<8,d6            ;right X minus max right
+000001AC  6D00 0058                278      BLT     .ag_X_MIN
+000001B0                           279      ;if greater than equal
+000001B0  4280                     280      clr.l   d0
+000001B2  906F 0008                281      sub.w   BALL_VELOCITY_X(sp),d0
+000001B6  3F40 0008                282      move.w  d0,BALL_VELOCITY_X(sp)
+Line 283 ERROR: Invalid syntax
+000001BA                           283      move.l  #(OUTPUT_MAX_WIDTH-BALL_DIAMETER)<<8,d6
+000001BA  6084                     284      BRA     .ag_EnemyScored
+000001BC                           285      
+Line 286 ERROR: Symbol value differs between first and second pass
+000001BC                           286  .ag_X_MIN
+000001BC  BCBC 00000000            287      cmp.l   #0,d6            ;left X minus comp 0    
+000001C2  6EDA                     288      BGT     .ag_Y_MAX
+000001C4  4280                     289      clr.l   d0
+000001C6  906F 0008                290      sub.w   BALL_VELOCITY_X(sp),d0
+000001CA  3F40 0008                291      move.w  d0,BALL_VELOCITY_X(sp)
+000001CE  7C00                     292      move.l  #0,d6
+000001D0  6000 FF10                293      BRA     .ag_PlayerScored
+000001D4                           294      
+000001D4                           295      
+000001D4                           296      
+000001D4                           297  ;d0 = Ball Position X
+000001D4                           298  ;d1 = Ball Position Y    
+Line 299 ERROR: Symbol value differs between first and second pass
+000001D4                           299  ag_DrawBall:      
+000001D4                           300  
+Line 301 ERROR: Undefined symbol
+000001D4                           301      movem.l ALL_REG,-(sp)
+000001D4  223C 000000FF            302      move.l  #COLOR_RED,d1
+000001DA                           303   
+000001DA                           304      
+000001DA  7050                     305      move.l  #SET_PEN_COLOR,d0
+000001DC  4E4F                     306      TRAP #15
+000001DE                           307      
+000001DE  7051                     308      move.l  #SET_FILL_COLOR,d0
+000001E0  4E4F                     309      TRAP #15
+000001E2                           310      
+000001E2  222F 0000                311      move.l  0(sp),d1
+000001E6  E081                     312      asr.l   #8,d1
+000001E8                           313      
+000001E8  282F 0004                314      move.l  4(sp),d4
+000001EC  E084                     315      asr.l   #8,d4
+000001EE                           316  
+000001EE  2601                     317      move.l  d1,d3                       ;Move Left X to Right X
+Line 318 ERROR: Undefined symbol
+000001F0  0683 004DBD16            318      add.l   #BALL_DIAMETER,d3           ;Add diameter to Right X
+000001F6                           319      
+000001F6  2404                     320      move.l  d4,d2                       ;Move Lower Y to Upper Y       
+Line 321 ERROR: Undefined symbol
+000001F8  0682 004DBD16            321      add.l   #BALL_DIAMETER,d2           ;Add diameter to Upper Y
+000001FE                           322      
+000001FE  7058                     323      move.l  #DRAW_FILLED_ELLIPSE,d0
+00000200  4E4F                     324      TRAP #15
+00000202                           325         
+Line 326 ERROR: Undefined symbol
+00000202                           326      movem.l (sp)+,ALL_REG
+00000202  4E75                     327      rts
+00000204                           328  
+00000204                           329  
+00000204                           330  
+Line 331 ERROR: Symbol value differs between first and second pass
+00000204=                          331  IgnorePaddle    dc.b    $00
+Line 332 ERROR: Symbol value differs between first and second pass
+00000204=                          332  PadBytes        dc.b    3
+00000204                           333  
+00000204                           334  
+00000204                           335  
+00000204                           336  
+00000204                           337  
+00000204                           338  
+00000204                           339  
+00000204                           340  
+00000204                           341  
+00000204                           342  
+00000204                           343  
+Line 344 WARNING: END directive missing, starting address not set
+
+38 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+AG_DRAWBALL         21E
+AG_UPDATEBALL       0
+AG_UPDATEBALL:AG_CHECK_ENEMY  86
+AG_UPDATEBALL:AG_CHECK_PLAYER  28
+AG_UPDATEBALL:AG_EDGECHECK  19E
+AG_UPDATEBALL:AG_ENEMYSCORED  140
+AG_UPDATEBALL:AG_PADDLEMISS  1E0
+AG_UPDATEBALL:AG_PLAYERSCORED  E2
+AG_UPDATEBALL:AG_SAVEPOS  1D2
+AG_UPDATEBALL:AG_X_MAX  1E8
+AG_UPDATEBALL:AG_X_MIN  206
+AG_UPDATEBALL:AG_Y_MAX  19E
+AG_UPDATEBALL:AG_Y_MIN  1BC
+BALL_POSITION_X     0
+BALL_POSITION_Y     4
+BALL_REG            7FFF
+BALL_VELOCITY_X     8
+BALL_VELOCITY_Y     A
+COLOR_RED           FF
+COLOR_WHITE         FFFFFF
+DRAW_FILLED_ELLIPSE  58
+DRAW_PIXEL          52
+ENEMY_POS_X         14
+ENEMY_POS_Y         18
+ENEMY_SCORE         24
+IGNOREPADDLE        24E
+PADBYTES            24F
+PADDLE_SIZE_X       1C
+PADDLE_SIZE_Y       1E
+PLAYER_POS_X        C
+PLAYER_POS_Y        10
+PLAYER_SCORE        20
+SET_FILL_COLOR      51
+SET_PEN_COLOR       50

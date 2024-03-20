@@ -1,0 +1,247 @@
+00002000 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 10/15/2023 1:38:36 PM
+
+00000000                             1  *-----------------------------------------------------------
+00000000                             2  * Title      :
+00000000                             3  * Written by :
+00000000                             4  * Date       :
+00000000                             5  * Description:
+00000000                             6  *-----------------------------------------------------------
+00000000                             7  
+00000000                             8  SCORE_REG               REG             D0-D7/A0-A6
+00000000                             9  
+00000000  =00FFFF00                 10  SCORE_COLOR             EQU             $00FFFF00
+00000000  =00000000                 11  SCORE_EDGE_COLOR        EQU             $00000000
+00000000  =00000004                 12  SCORE_POS_X             EQU             4
+00000000  =00000006                 13  SCORE_POS_Y             EQU             6
+00000000  =00000008                 14  SCORE_WIDTH             EQU             8
+00000000  =0000000A                 15  SCORE_HEIGHT            EQU             10
+00000000                            16  
+00000000  =00000005                 17  SCORE_THICKNESS         EQU             5
+00000000                            18  
+00000000                            19  
+00000000                            20  ag_DrawScoreLED
+00000000                            21  
+00000000                            22      ;d1 = score
+00000000                            23      ;d2 = x,y word/word position
+00000000                            24      ;d3 = width,height (word each)
+00000000                            25  
+00000000  48E7 FFFE                 26      movem.l SCORE_REG,-(sp)
+00000004                            27      
+00000004  4281                      28      clr.l   d1
+00000006  4282                      29      clr.l   d2
+00000008  4286                      30      clr.l   d6
+0000000A  41F9 00000148             31      lea     ScoreMask,a0
+00000010                            32      
+00000010                            33      ;---
+00000010                            34      ;Set pen colors
+00000010                            35      ;---
+00000010                            36      
+Line 37 ERROR: Undefined symbol
+00000010  203C 004DBD16             37      move.l  #SET_PEN_COLOR,d0
+00000016  7200                      38      move.l  #SCORE_EDGE_COLOR,d1
+00000018  4E4F                      39      TRAP    #15
+0000001A                            40      
+Line 41 ERROR: Undefined symbol
+0000001A  203C 004DBD16             41      move.l  #SET_FILL_COLOR,d0
+00000020  223C 00FFFF00             42      move.l  #SCORE_COLOR,d1
+00000026  4E4F                      43      TRAP    #15
+00000028                            44      
+00000028                            45      
+00000028                            46      ;----
+00000028                            47      ;Get score and get the correct bitmask to show that score
+00000028                            48      ;----
+00000028                            49      
+00000028  2217                      50      move.l  (sp),d1        ;Move score to d1
+0000002A  1C30 1000                 51      move.b  (a0,d1),d6      ;Move bitmask according to score to d6
+0000002E                            52      
+0000002E                            53      ;---
+0000002E                            54      ;Using Bitmask, print the correct part to screen
+0000002E                            55      ;---
+0000002E                            56      ;BTST 6-0               ;Bit 7 is always 0    
+0000002E  4281                      57      clr.l   d1
+00000030  4282                      58      clr.l   d2
+00000032  4283                      59      clr.l   d3
+00000034  4284                      60      clr.l   d4
+Line 61 ERROR: Undefined symbol
+00000036  203C 004DBD16             61      move.l  #DRAW_FRECT,d0
+0000003C                            62      
+0000003C                            63      ;A
+0000003C                            64  .SegmentA
+0000003C  0806 0006                 65      BTST    #$6,d6
+00000040  6700 0016                 66      BEQ     .SegmentB
+00000044                            67      
+00000044                            68      ;Print A segment
+00000044  322F 0004                 69      move.w  SCORE_POS_X(sp),d1
+00000048  342F 0006                 70      move.w  SCORE_POS_Y(sp),d2
+0000004C                            71      
+0000004C  3601                      72      move.w  d1,d3
+0000004E  D66F 0008                 73      add.w   SCORE_WIDTH(sp),d3
+00000052                            74      
+00000052  3802                      75      move.w  d2,d4
+00000054  5A44                      76      add.w   #SCORE_THICKNESS,d4
+00000056                            77      
+00000056  4E4F                      78      TRAP    #15
+00000058                            79      
+00000058                            80      ;B
+00000058                            81  .SegmentB
+00000058  0806 0005                 82      BTST    #$5,d6
+0000005C  6700 001E                 83      BEQ     .SegmentC
+00000060                            84      
+00000060                            85      ;Print B Segment
+00000060  362F 0004                 86      move.w  SCORE_POS_X(sp),d3
+00000064  D66F 0008                 87      add.w   SCORE_WIDTH(sp),d3
+00000068  3203                      88      move.w  d3,d1
+0000006A  5B41                      89      sub.w   #SCORE_THICKNESS,d1
+0000006C                            90      
+0000006C  342F 0006                 91      move.w  SCORE_POS_Y(sp),d2
+00000070                            92      
+00000070  382F 000A                 93      move.w  SCORE_HEIGHT(sp),d4
+00000074  88FC 0002                 94      divu.w  #2,d4
+00000078  D842                      95      add.w   d2,d4
+0000007A                            96      
+0000007A  4E4F                      97      TRAP    #15
+0000007C                            98      
+0000007C                            99      
+0000007C                           100      ;C
+0000007C                           101  .SegmentC    
+0000007C  0806 0004                102      BTST    #$4,d6
+00000080  6700 0024                103      BEQ     .SegmentD
+00000084                           104      
+00000084                           105      ;Print C Segment
+00000084  362F 0004                106      move.w  SCORE_POS_X(sp),d3
+00000088  D66F 0008                107      add.w   SCORE_WIDTH(sp),d3
+0000008C  3203                     108      move.w  d3,d1
+0000008E  5B41                     109      sub.w   #SCORE_THICKNESS,d1
+00000090                           110      
+00000090  342F 000A                111      move.w  SCORE_HEIGHT(sp),d2
+00000094  84FC 0002                112      divu.w  #2,d2
+00000098  D46F 0006                113      add.w   SCORE_POS_Y(sp),d2
+0000009C                           114      
+0000009C                           115      
+0000009C  382F 000A                116      move.w  SCORE_HEIGHT(sp),d4
+000000A0  D86F 0006                117      add.w   SCORE_POS_Y(sp),d4
+000000A4                           118      
+000000A4  4E4F                     119      TRAP    #15
+000000A6                           120  
+000000A6                           121      ;D
+000000A6                           122  .SegmentD
+000000A6  0806 0003                123      BTST    #$3,d6
+000000AA  6700 0020                124      BEQ     .SegmentE
+000000AE                           125      
+000000AE                           126      ;Print D segment
+000000AE  322F 0004                127      move.w  SCORE_POS_X(sp),d1
+000000B2                           128      
+000000B2  342F 000A                129      move.w  SCORE_HEIGHT(sp),d2
+000000B6  5B42                     130      sub.w   #SCORE_THICKNESS,d2
+000000B8  D46F 0006                131      add.w  SCORE_POS_Y(sp),d2
+000000BC                           132      
+000000BC  3601                     133      move.w  d1,d3
+000000BE  D66F 0008                134      add.w   SCORE_WIDTH(sp),d3
+000000C2                           135      
+000000C2  382F 000A                136      move.w   SCORE_HEIGHT(sp),d4
+000000C6  D86F 0006                137      add.w    SCORE_POS_Y(sp),d4
+000000CA                           138      
+000000CA  4E4F                     139      TRAP    #15
+000000CC                           140      
+000000CC                           141      
+000000CC                           142      ;E
+000000CC                           143  .SegmentE
+000000CC  0806 0002                144      BTST    #$2,d6
+000000D0  6700 0020                145      BEQ     .SegmentF
+000000D4                           146      
+000000D4  322F 0004                147      move.w  SCORE_POS_X(sp),d1
+000000D8  3601                     148      move.w  d1,d3
+000000DA  5A43                     149      add.w   #SCORE_THICKNESS,d3
+000000DC                           150      
+000000DC  342F 000A                151      move.w  SCORE_HEIGHT(sp),d2
+000000E0  84FC 0002                152      divu.w  #2,d2
+000000E4  D46F 0006                153      add.w   SCORE_POS_Y(sp),d2
+000000E8                           154      
+000000E8                           155      
+000000E8  382F 000A                156      move.w  SCORE_HEIGHT(sp),d4
+000000EC  D86F 0006                157      add.w   SCORE_POS_Y(sp),d4
+000000F0                           158      
+000000F0  4E4F                     159      TRAP    #15
+000000F2                           160      
+000000F2                           161      ;F
+000000F2                           162  .SegmentF
+000000F2  0806 0001                163      BTST    #$1,d6
+000000F6  6700 001A                164      BEQ     .SegmentG
+000000FA                           165      
+000000FA  322F 0004                166      move.w  SCORE_POS_X(sp),d1
+000000FE  3601                     167      move.w  d1,d3
+00000100  5A43                     168      add.w   #SCORE_THICKNESS,d3
+00000102                           169      
+00000102  342F 0006                170      move.w  SCORE_POS_Y(sp),d2
+00000106                           171      
+00000106  382F 000A                172      move.w  SCORE_HEIGHT(sp),d4
+0000010A  88FC 0002                173      divu.w  #2,d4
+0000010E  D842                     174      add.w   d2,d4
+00000110                           175      
+00000110  4E4F                     176      TRAP    #15
+00000112                           177      
+00000112                           178      ;G
+00000112                           179  .SegmentG
+00000112  0806 0000                180      BTST    #$0,d6
+00000116  6700 002A                181      BEQ     .End
+0000011A                           182      
+0000011A  322F 0004                183      move.w  SCORE_POS_X(sp),d1
+0000011E  3601                     184      move.w  d1,d3
+00000120  D66F 0008                185      add.w   SCORE_WIDTH(sp),d3
+00000124                           186      
+00000124                           187      
+00000124  342F 000A                188      move.w  SCORE_HEIGHT(sp),d2
+00000128  84FC 0002                189      divu.w  #2,d2
+0000012C  D46F 0006                190      add.w   SCORE_POS_Y(sp),d2
+00000130  3802                     191      move.w  d2,d4
+00000132                           192      
+00000132  4285                     193      clr.l   d5
+00000134  3A3C 0005                194      move.w  #SCORE_THICKNESS,d5
+00000138  8AFC 0002                195      divu.w  #2,d5
+0000013C                           196      
+0000013C                           197      
+0000013C  9445                     198      sub.w   d5,d2
+0000013E  D845                     199      add.w   d5,d4
+00000140                           200      
+00000140  4E4F                     201      TRAP    #15
+00000142                           202      
+00000142                           203      
+00000142                           204  .End
+00000142                           205      
+00000142                           206      
+00000142  4CDF 7FFF                207      movem.l (sp)+,SCORE_REG
+00000146  4E75                     208      rts
+00000148                           209      
+00000148                           210  
+00000148                           211  ;xXABCDEFG               0   1   2   3   4   5  6    7   8   9
+00000148= 7E 30 6D 79 33 5B ...    212  ScoreMask      dc.b     $7E,$30,$6D,$79,$33,$5B,$5F,$70,$7F,$7B
+00000152                           213  
+Line 214 WARNING: END directive missing, starting address not set
+
+3 errors detected
+1 warning generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+AG_DRAWSCORELED     0
+AG_DRAWSCORELED:END  142
+AG_DRAWSCORELED:SEGMENTA  3C
+AG_DRAWSCORELED:SEGMENTB  58
+AG_DRAWSCORELED:SEGMENTC  7C
+AG_DRAWSCORELED:SEGMENTD  A6
+AG_DRAWSCORELED:SEGMENTE  CC
+AG_DRAWSCORELED:SEGMENTF  F2
+AG_DRAWSCORELED:SEGMENTG  112
+SCOREMASK           148
+SCORE_COLOR         FFFF00
+SCORE_EDGE_COLOR    0
+SCORE_HEIGHT        A
+SCORE_POS_X         4
+SCORE_POS_Y         6
+SCORE_REG           7FFF
+SCORE_THICKNESS     5
+SCORE_WIDTH         8
